@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: betti-coaching-calendar-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: betti
+      POSTGRES_PASSWORD: betti
+      POSTGRES_DB: betti_coaching_calendar
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

@@ -1,0 +1,52 @@
+{
+  "email.common.footer": "Ezt az e-mailt a Betti Coaching foglalási rendszere küldte.",
+  "email.common.detailsHeading": "Foglalás részletei",
+  "email.common.labelEventType": "Esemény",
+  "email.common.labelDateTime": "Időpont",
+  "email.common.labelDuration": "Hossz",
+  "email.common.labelLocation": "Helyszín",
+  "email.common.labelClient": "Ügyfél",
+  "email.common.minutes": "{{count}} perc",
+  "email.common.locationInPerson": "Személyes találkozó – {{address}}",
+  "email.common.locationGoogleMeet": "Google Meet – {{link}}",
+  "email.common.locationPhone": "Telefonos hívás – {{phone}}",
+  "email.common.buttonAddToGoogleCalendar": "Hozzáadás a Google Naptárhoz",
+  "email.common.buttonManageBooking": "Foglalás kezelése",
+
+  "email.bookingConfirmed.client.subject": "Foglalásod visszaigazolva – {{title}}",
+  "email.bookingConfirmed.client.preview": "Visszaigazoltuk az időpontodat: {{title}}",
+  "email.bookingConfirmed.client.heading": "Visszaigazoltuk az időpontodat",
+  "email.bookingConfirmed.client.intro": "Szia {{name}}! Az alábbi időpontot sikeresen lefoglaltad.",
+  "email.bookingConfirmed.client.manageHint": "Ha mégsem tudsz részt venni, az alábbi gombbal bármikor lemondhatod vagy új időpontra módosíthatod a foglalást.",
+
+  "email.bookingConfirmed.coach.subject": "Új foglalás érkezett – {{title}}",
+  "email.bookingConfirmed.coach.preview": "{{clientName}} lefoglalt egy időpontot nálad",
+  "email.bookingConfirmed.coach.heading": "Új időpontod érkezett",
+  "email.bookingConfirmed.coach.intro": "{{clientName}} lefoglalt egy időpontot nálad.",
+
+  "email.bookingCancelled.client.subject": "Lemondva – {{title}}",
+  "email.bookingCancelled.client.preview": "A foglalásod lemondásra került",
+  "email.bookingCancelled.client.heading": "A foglalásod lemondásra került",
+  "email.bookingCancelled.client.introByClient": "Megerősítjük, hogy lemondtad az alábbi időpontot.",
+  "email.bookingCancelled.client.introByCoach": "Sajnálattal értesítünk, hogy a coach lemondta az alábbi időpontot.",
+  "email.bookingCancelled.client.reasonLabel": "Indoklás",
+  "email.bookingCancelled.client.rebookHint": "Új időpontot bármikor foglalhatsz az oldalunkon.",
+
+  "email.bookingCancelled.coach.subject": "Lemondva – {{title}}",
+  "email.bookingCancelled.coach.preview": "Egy foglalás lemondásra került",
+  "email.bookingCancelled.coach.heading": "Egy foglalás lemondásra került",
+  "email.bookingCancelled.coach.introByClient": "{{clientName}} lemondta az alábbi foglalást.",
+  "email.bookingCancelled.coach.introByCoach": "Lemondtad az alábbi foglalást.",
+  "email.bookingCancelled.coach.reasonLabel": "Indoklás",
+
+  "email.bookingRescheduled.client.subject": "Új időpont – {{title}}",
+  "email.bookingRescheduled.client.preview": "A foglalásod új időpontra került",
+  "email.bookingRescheduled.client.heading": "A foglalásod új időpontra került",
+  "email.bookingRescheduled.client.intro": "Az alábbi új időpontra módosítottad a foglalásodat.",
+  "email.bookingRescheduled.client.manageHint": "Ha ez az időpont mégsem jó, az alábbi gombbal bármikor módosíthatod vagy lemondhatod.",
+
+  "email.bookingRescheduled.coach.subject": "Módosított időpont – {{title}}",
+  "email.bookingRescheduled.coach.preview": "{{clientName}} új időpontra módosította a foglalását",
+  "email.bookingRescheduled.coach.heading": "Egy foglalás új időpontra módosult",
+  "email.bookingRescheduled.coach.intro": "{{clientName}} új időpontra módosította a foglalását."
+}

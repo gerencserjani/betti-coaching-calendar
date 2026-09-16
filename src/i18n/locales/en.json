@@ -1,0 +1,52 @@
+{
+  "email.common.footer": "This email was sent by the Betti Coaching booking system.",
+  "email.common.detailsHeading": "Booking details",
+  "email.common.labelEventType": "Event",
+  "email.common.labelDateTime": "Date & time",
+  "email.common.labelDuration": "Duration",
+  "email.common.labelLocation": "Location",
+  "email.common.labelClient": "Client",
+  "email.common.minutes": "{{count}} minutes",
+  "email.common.locationInPerson": "In person – {{address}}",
+  "email.common.locationGoogleMeet": "Google Meet – {{link}}",
+  "email.common.locationPhone": "Phone call – {{phone}}",
+  "email.common.buttonAddToGoogleCalendar": "Add to Google Calendar",
+  "email.common.buttonManageBooking": "Manage booking",
+
+  "email.bookingConfirmed.client.subject": "Booking confirmed – {{title}}",
+  "email.bookingConfirmed.client.preview": "Your booking is confirmed: {{title}}",
+  "email.bookingConfirmed.client.heading": "Your booking is confirmed",
+  "email.bookingConfirmed.client.intro": "Hi {{name}}! You've successfully booked the appointment below.",
+  "email.bookingConfirmed.client.manageHint": "If you can no longer make it, use the button below to cancel or reschedule at any time.",
+
+  "email.bookingConfirmed.coach.subject": "New booking – {{title}}",
+  "email.bookingConfirmed.coach.preview": "{{clientName}} booked a session with you",
+  "email.bookingConfirmed.coach.heading": "You have a new booking",
+  "email.bookingConfirmed.coach.intro": "{{clientName}} booked a session with you.",
+
+  "email.bookingCancelled.client.subject": "Cancelled – {{title}}",
+  "email.bookingCancelled.client.preview": "Your booking has been cancelled",
+  "email.bookingCancelled.client.heading": "Your booking has been cancelled",
+  "email.bookingCancelled.client.introByClient": "This confirms that you cancelled the appointment below.",
+  "email.bookingCancelled.client.introByCoach": "Unfortunately the coach had to cancel the appointment below.",
+  "email.bookingCancelled.client.reasonLabel": "Reason",
+  "email.bookingCancelled.client.rebookHint": "You can book a new time on our site whenever you're ready.",
+
+  "email.bookingCancelled.coach.subject": "Cancelled – {{title}}",
+  "email.bookingCancelled.coach.preview": "A booking has been cancelled",
+  "email.bookingCancelled.coach.heading": "A booking has been cancelled",
+  "email.bookingCancelled.coach.introByClient": "{{clientName}} cancelled the booking below.",
+  "email.bookingCancelled.coach.introByCoach": "You cancelled the booking below.",
+  "email.bookingCancelled.coach.reasonLabel": "Reason",
+
+  "email.bookingRescheduled.client.subject": "New time – {{title}}",
+  "email.bookingRescheduled.client.preview": "Your booking moved to a new time",
+  "email.bookingRescheduled.client.heading": "Your booking moved to a new time",
+  "email.bookingRescheduled.client.intro": "You rescheduled your booking to the new time below.",
+  "email.bookingRescheduled.client.manageHint": "If this time doesn't work either, use the button below to change or cancel it.",
+
+  "email.bookingRescheduled.coach.subject": "Rescheduled – {{title}}",
+  "email.bookingRescheduled.coach.preview": "{{clientName}} rescheduled their booking",
+  "email.bookingRescheduled.coach.heading": "A booking was rescheduled",
+  "email.bookingRescheduled.coach.intro": "{{clientName}} rescheduled their booking."
+}

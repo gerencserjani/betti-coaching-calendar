@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LocationType {
+  IN_PERSON
+  GOOGLE_MEET
+  PHONE
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum CancelledBy {
+  CLIENT
+  COACH
+}
+
+enum CoachRole {
+  ADMIN
+  COACH
+}
+
+model Coach {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  preferredLocale String    @default("hu")
+  role            CoachRole @default(COACH)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  eventTypes           EventType[]
+  weeklyAvailabilities WeeklyAvailability[]
+  overrides            AvailabilityOverride[]
+  bookings             Booking[]
+}
+
+model EventType {
+  id              String         @id @default(cuid())
+  coach           Coach          @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coachId         String
+  title           String
+  description     String?
+  durationMinutes Int
+  locations       LocationType[]
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  bookings Booking[]
+
+  @@index([coachId])
+}
+
+/// Recurring weekly working hours. Multiple rows per weekday are allowed
+/// to support split shifts (e.g. 09:00-12:00 and 13:00-17:00).
+model WeeklyAvailability {
+  id          String   @id @default(cuid())
+  coach       Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coachId     String
+  /// ISO weekday: 1 = Monday ... 7 = Sunday
+  weekday     Int
+  /// Minutes since midnight, in the business timezone
+  startMinute Int
+  endMinute   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([coachId, weekday])
+}
+
+/// Overrides the weekly schedule for one specific calendar date.
+/// isUnavailable = true marks the whole day off (startMinute/endMinute unused).
+/// Otherwise startMinute/endMinute replace the weekly hours for that date;
+/// multiple rows on the same date support split ranges.
+model AvailabilityOverride {
+  id            String   @id @default(cuid())
+  coach         Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coachId       String
+  date          DateTime @db.Date
+  isUnavailable Boolean  @default(false)
+  startMinute   Int?
+  endMinute     Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([coachId, date])
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  eventType          EventType     @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
+  eventTypeId        String
+  coach              Coach         @relation(fields: [coachId], references: [id], onDelete: Restrict)
+  coachId            String
+  startAt            DateTime
+  endAt              DateTime
+  location           LocationType
+  clientName         String
+  clientEmail        String
+  clientPhone        String
+  clientNote         String?
+  locale             String        @default("hu")
+  status             BookingStatus @default(CONFIRMED)
+  cancelledBy        CancelledBy?
+  cancellationReason String?
+  manageToken        String        @unique
+  googleEventId      String?
+  meetLink           String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([coachId, startAt])
+  @@index([status, startAt])
+}
+
+/// Singleton row (id is always "singleton").
+model Settings {
+  id                      String   @id @default("singleton")
+  businessAddress         String   @default("")
+  cancellationNoticeHours Int      @default(48)
+  businessTimezone        String   @default("Europe/Budapest")
+  updatedAt               DateTime @updatedAt
+}
+
+/// Singleton row (id is always "singleton") holding the one central Google
+/// account used to mint fresh Google Meet links for bookings.
+model GoogleIntegration {
+  id                    String   @id @default("singleton")
+  refreshTokenEncrypted String
+  connectedEmail        String
+  connectedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
