@@ -20,6 +20,21 @@ npm run start:dev
 The API listens on `PORT` (default 3000). `GET /health` is a plain liveness
 check.
 
+## API docs (OpenAPI/Swagger)
+
+Interactive docs: `GET /docs`. Raw spec for tooling/agents: `GET /docs-json`
+(also `/docs-yaml`) — generated automatically from the DTOs and controller
+decorators (`@nestjs/swagger`'s Nest CLI plugin infers most of it from the
+existing TypeScript types and class-validator decorators, no manual
+`@ApiProperty()` annotation needed on request DTOs). Endpoints that require a
+bearer token are marked `security: [{ bearer: [] }]` in the spec.
+
+**Known gap**: response bodies aren't backed by dedicated DTO classes (they're
+mostly raw Prisma model shapes returned straight from services), so response
+schemas in the spec are generic (`type: object`) rather than fully typed.
+Request bodies, query params, enums, and auth requirements are fully accurate
+though — enough for a frontend/agent to know what to send and where.
+
 ## Environment variables
 
 See `.env.example` for the full list. Notes on the less obvious ones:

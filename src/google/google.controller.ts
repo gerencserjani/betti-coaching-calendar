@@ -1,4 +1,5 @@
 import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
@@ -6,6 +7,7 @@ import { RolesGuard } from '../auth/roles.guard.js';
 import { CoachRole } from '@prisma/client';
 import { GoogleOAuthService } from './google-oauth.service.js';
 
+@ApiTags('google')
 @Controller('admin/google')
 export class GoogleController {
   constructor(private readonly oauthService: GoogleOAuthService) {}
@@ -29,6 +31,7 @@ export class GoogleController {
     return { connected: true };
   }
 
+  @ApiBearerAuth()
   @Get('status')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(CoachRole.ADMIN)

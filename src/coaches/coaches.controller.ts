@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CoachRole, type Coach } from '@prisma/client';
 import { CurrentCoach } from '../auth/current-coach.decorator.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
@@ -8,6 +9,8 @@ import { CoachesService } from './coaches.service.js';
 import { CreateCoachDto } from './dto/create-coach.dto.js';
 import { UpdateCoachDto } from './dto/update-coach.dto.js';
 
+@ApiTags('coaches')
+@ApiBearerAuth()
 @Controller('coaches')
 @UseGuards(JwtAuthGuard)
 export class CoachesController {

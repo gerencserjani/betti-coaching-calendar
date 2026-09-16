@@ -2,9 +2,11 @@ import 'dotenv/config';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { StripPasswordHashInterceptor } from './common/strip-password-hash.interceptor.js';
 import type { AppConfig } from './config/configuration.js';
+import { buildOpenApiDocument } from './swagger.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +22,10 @@ async function bootstrap() {
     }),
   );
   app.useGlobalInterceptors(new StripPasswordHashInterceptor());
+
+  // Interactive docs at /docs, raw spec at /docs-json (and /docs-yaml) - a
+  // frontend agent can fetch /docs-json directly instead of reading source.
+  SwaggerModule.setup('docs', app, buildOpenApiDocument(app));
 
   await app.listen(port);
 }
