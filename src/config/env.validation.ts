@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsEmail,
   IsIn,
   IsInt,
   IsString,
@@ -29,8 +30,12 @@ class EnvironmentVariables {
   @MinLength(32)
   JWT_SECRET!: string;
 
+  @IsEmail()
+  GMAIL_USER!: string;
+
   @IsString()
-  RESEND_API_KEY!: string;
+  @MinLength(16)
+  GMAIL_APP_PASSWORD!: string;
 
   @IsString()
   EMAIL_FROM!: string;

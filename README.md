@@ -43,6 +43,19 @@ See `.env.example` for the full list. Notes on the less obvious ones:
   `docker-compose.yml` out of the box.
 - **`JWT_SECRET`** — signs the app's own login tokens (see "Auth" below).
   32+ random characters; generate with `openssl rand -base64 32`.
+- **`GMAIL_USER` / `GMAIL_APP_PASSWORD`** — email is sent through Gmail's own
+  SMTP, authenticated as a real Gmail account. This is deliberate, not a
+  placeholder: third-party email APIs (Resend, SendGrid, …) can never send
+  _from_ a `@gmail.com` address — only Google's own servers are authorized to
+  (that's what SPF/DKIM enforce) — so sending through Gmail SMTP directly is
+  the correct way to have `EMAIL_FROM` genuinely be a Gmail address. Turn on
+  2-Step Verification on that Google account, then generate an **App
+  Password** (not the account password) at
+  [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+  `EMAIL_FROM` must be `GMAIL_USER` itself, or a "Send mail as" alias
+  configured on that account — Gmail SMTP rejects/rewrites a From address it
+  doesn't recognize. Gmail's sending limit is ~500/day on a regular account,
+  far above what this app needs.
 - **`ENCRYPTION_KEY`** — 32-byte, base64-encoded key used to encrypt the
   stored Google refresh token at rest. Generate with `openssl rand -base64 32`
   (a working dev value is already in `.env`, generate a fresh one for
@@ -135,13 +148,17 @@ reasoning in the conversation history if you need the "why".
 - **Coach/admin endpoints require a bearer token** from `POST /auth/login`
   (`JwtAuthGuard`, see "Auth" above). Admin-only routes additionally use
   `RolesGuard` + `@Roles(CoachRole.ADMIN)`.
-- **Notifications**: Resend + React Email (`src/notifications/templates`),
+- **Notifications**: nodemailer (Gmail SMTP) + React Email (`src/notifications/templates`),
   bilingual (hu/en) via a small i18next-based service reading flat-key JSON
   files from `src/i18n/locales/`, mirroring the frontend's own i18next setup.
   Every confirmation/reschedule email carries a `.ics` attachment (works in
   Apple/Outlook/Google) plus a Google Calendar "quick add" link. Email
   sending is best-effort and asynchronous — a failed send is logged but never
-  fails the booking API call itself.
+  fails the booking API call itself. The email HTML mirrors the frontend's
+  brand (colors/fonts from `betti-coaching/src/index.css`'s custom
+  properties, both light and dark-mode variants) — see the comment above the
+  `light`/`dark` palette constants in `BookingEmail.tsx` if that palette
+  changes and the email needs updating to match.
 - **Cancellation/reschedule**: only the client can reschedule (self-service);
   a coach can only cancel, with a mandatory reason. Both are blocked within
   `Settings.cancellationNoticeHours` (default 48h) of the appointment for
@@ -161,7 +178,7 @@ PowerShell calling `bash`, and not through an AI-assistant's one-shot command
 runner — it's fully interactive across 8 stages and needs a real TTY you can
 type into) for a guided, re-runnable walkthrough: gcloud CLI setup, GCP
 project/billing, Neon database creation, the Google OAuth client for Meet
-links, Resend values, and the first `gcloud run deploy`. It writes secrets to
+links, the Gmail App Password, and the first `gcloud run deploy`. It writes secrets to
 `.env.production` and `env.yaml` (both gitignored, kept separate from the
 local-dev `.env`) and remembers what you've already entered if you stop and
 re-run it. The very last thing it prompts for is running

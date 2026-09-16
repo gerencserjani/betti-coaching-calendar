@@ -3,9 +3,10 @@ export interface AppConfig {
   businessTimezone: string;
   frontendUrl: string;
   jwtSecret: string;
-  resend: {
-    apiKey: string;
-    emailFrom: string;
+  emailFrom: string;
+  gmail: {
+    user: string;
+    appPassword: string;
   };
   google: {
     clientId: string;
@@ -21,9 +22,10 @@ export default (): { app: AppConfig } => ({
     businessTimezone: process.env.BUSINESS_TIMEZONE ?? 'Europe/Budapest',
     frontendUrl: process.env.FRONTEND_URL ?? '',
     jwtSecret: process.env.JWT_SECRET ?? '',
-    resend: {
-      apiKey: process.env.RESEND_API_KEY ?? '',
-      emailFrom: process.env.EMAIL_FROM ?? '',
+    emailFrom: process.env.EMAIL_FROM ?? '',
+    gmail: {
+      user: process.env.GMAIL_USER ?? '',
+      appPassword: process.env.GMAIL_APP_PASSWORD ?? '',
     },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
