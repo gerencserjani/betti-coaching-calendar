@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +15,8 @@ import type { Coach } from '@prisma/client';
 import { AvailabilityOverrideService } from './availability-override.service.js';
 import { CreateAvailabilityOverrideDto } from './dto/create-availability-override.dto.js';
 import { CreateWeeklyAvailabilityDto } from './dto/create-weekly-availability.dto.js';
+import { UpdateAvailabilityOverrideDto } from './dto/update-availability-override.dto.js';
+import { UpdateWeeklyAvailabilityDto } from './dto/update-weekly-availability.dto.js';
 import { WeeklyAvailabilityService } from './weekly-availability.service.js';
 
 @ApiTags('availability')
@@ -39,6 +42,15 @@ export class AvailabilityController {
     return this.weeklyService.create(coach, dto);
   }
 
+  @Patch('weekly/:id')
+  updateWeekly(
+    @CurrentCoach() coach: Coach,
+    @Param('id') id: string,
+    @Body() dto: UpdateWeeklyAvailabilityDto,
+  ) {
+    return this.weeklyService.update(coach, id, dto);
+  }
+
   @Delete('weekly/:id')
   removeWeekly(@CurrentCoach() coach: Coach, @Param('id') id: string) {
     return this.weeklyService.remove(coach, id);
@@ -55,6 +67,15 @@ export class AvailabilityController {
     @Body() dto: CreateAvailabilityOverrideDto,
   ) {
     return this.overrideService.create(coach, dto);
+  }
+
+  @Patch('overrides/:id')
+  updateOverride(
+    @CurrentCoach() coach: Coach,
+    @Param('id') id: string,
+    @Body() dto: UpdateAvailabilityOverrideDto,
+  ) {
+    return this.overrideService.update(coach, id, dto);
   }
 
   @Delete('overrides/:id')
