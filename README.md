@@ -132,7 +132,10 @@ reasoning in the conversation history if you need the "why".
 - **Domain model**: each `EventType` (title/description/duration/locations)
   belongs to one coach. Bookable slots for an event type come only from that
   coach's own `WeeklyAvailability` + `AvailabilityOverride`. Clients never
-  pick a coach explicitly — they just see a list of open times.
+  pick a coach explicitly — they just see a list of open times. `price`
+  (whole HUF, optional, defaults to and can never go below 0) and `position`
+  (display order in the public catalog, defaults to appended-at-the-end) are
+  both editable later via `PATCH /event-types/:id`.
 - **Shared-calendar conflict rule**: only one coach may be "on duty" at a
   time. Saving a weekly-hours row or a date override is rejected up front if
   it overlaps another coach's schedule (`AvailabilityService` in

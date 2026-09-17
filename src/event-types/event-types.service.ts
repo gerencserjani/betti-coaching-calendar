@@ -17,21 +17,30 @@ export class EventTypesService {
     return this.prisma.eventType.findMany({
       where: { isActive: true },
       include: { coach: { select: { id: true, name: true } } },
-      orderBy: { title: 'asc' },
+      orderBy: [{ position: 'asc' }, { title: 'asc' }],
     });
   }
 
   findMine(coachId: string): Promise<EventType[]> {
     return this.prisma.eventType.findMany({
       where: { coachId },
-      orderBy: { title: 'asc' },
+      orderBy: [{ position: 'asc' }, { title: 'asc' }],
     });
   }
 
-  create(coach: Coach, dto: CreateEventTypeDto): Promise<EventType> {
+  async create(coach: Coach, dto: CreateEventTypeDto): Promise<EventType> {
+    const position = dto.position ?? (await this.nextPosition());
     return this.prisma.eventType.create({
-      data: { ...dto, coachId: coach.id },
+      data: { ...dto, position, coachId: coach.id },
     });
+  }
+
+  /** Appends new event types to the end of the shared catalog's display order by default. */
+  private async nextPosition(): Promise<number> {
+    const last = await this.prisma.eventType.aggregate({
+      _max: { position: true },
+    });
+    return (last._max.position ?? -1) + 1;
   }
 
   async update(

@@ -54,6 +54,11 @@ model EventType {
   description     String?
   durationMinutes Int
   locations       LocationType[]
+  /// Whole HUF amount. 0 means "not priced" - showing a price is optional.
+  price           Int            @default(0)
+  /// Display order in the public catalog (ascending). Defaults to appended
+  /// at the end; editable afterwards to reorder the listing.
+  position        Int            @default(0)
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
