@@ -1,10 +1,11 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CoachRole, type Coach, type EventType } from '@prisma/client';
+import { CoachRole, Prisma, type Coach, type EventType } from '@prisma/client';
 import type { CreateEventTypeDto } from './dto/create-event-type.dto.js';
 import type { UpdateEventTypeDto } from './dto/update-event-type.dto.js';
 
@@ -62,6 +63,29 @@ export class EventTypesService {
       where: { id: eventType.id },
       data: { isActive: false },
     });
+  }
+
+  /**
+   * Permanently deletes an event type that was never actually booked. The
+   * Booking.eventType relation is onDelete: Restrict, so the database itself
+   * refuses this if any booking (past or future) still references it --
+   * caught here and turned into a clear error instead of a raw 500.
+   */
+  async remove(coach: Coach, eventTypeId: string): Promise<void> {
+    const eventType = await this.assertOwnership(coach, eventTypeId);
+    try {
+      await this.prisma.eventType.delete({ where: { id: eventType.id } });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          'This service has existing bookings and cannot be permanently deleted -- archive it instead',
+        );
+      }
+      throw error;
+    }
   }
 
   private async assertOwnership(

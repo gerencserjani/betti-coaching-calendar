@@ -58,4 +58,13 @@ export class EventTypesController {
   archive(@CurrentCoach() coach: Coach, @Param('id') id: string) {
     return this.eventTypesService.archive(coach, id);
   }
+
+  // Permanent delete, distinct from archive above -- only succeeds if the
+  // event type was never actually booked (see EventTypesService.remove).
+  @ApiBearerAuth()
+  @Delete(':id/permanent')
+  @UseGuards(JwtAuthGuard)
+  remove(@CurrentCoach() coach: Coach, @Param('id') id: string) {
+    return this.eventTypesService.remove(coach, id);
+  }
 }
