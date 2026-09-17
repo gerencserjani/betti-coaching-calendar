@@ -1,3 +1,9 @@
+# [1.4.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.3.0...v1.4.0) (2026-09-17)
+
+### Features
+
+- add permanent delete for event types with no bookings ([806af84](https://github.com/gerencserjani/betti-coaching-calendar/commit/806af84632d4598bd18c6027d02447df91603d2e))
+
 # [1.3.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.2.0...v1.3.0) (2026-09-17)
 
 ### Features
