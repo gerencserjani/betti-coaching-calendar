@@ -1,3 +1,9 @@
+# [1.3.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.2.0...v1.3.0) (2026-09-17)
+
+### Features
+
+- add price and display-position to event types ([f7a3bb8](https://github.com/gerencserjani/betti-coaching-calendar/commit/f7a3bb8c7785716ddab8eed406293fbb4b899cab))
+
 # [1.2.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.1.0...v1.2.0) (2026-09-16)
 
 ### Features
