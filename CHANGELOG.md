@@ -1,3 +1,9 @@
+## [1.5.1](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.5.0...v1.5.1) (2026-09-17)
+
+### Bug Fixes
+
+- close audit findings across auth, bookings, availability, and slots ([4f5b83c](https://github.com/gerencserjani/betti-coaching-calendar/commit/4f5b83c798ae047e4d0be23376f02e1bda1c2951))
+
 # [1.5.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.4.0...v1.5.0) (2026-09-17)
 
 ### Features
