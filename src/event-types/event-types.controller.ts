@@ -13,6 +13,7 @@ import { CurrentCoach } from '../auth/current-coach.decorator.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import type { Coach } from '@prisma/client';
 import { CreateEventTypeDto } from './dto/create-event-type.dto.js';
+import { ReorderEventTypesDto } from './dto/reorder-event-types.dto.js';
 import { UpdateEventTypeDto } from './dto/update-event-type.dto.js';
 import { EventTypesService } from './event-types.service.js';
 
@@ -39,6 +40,14 @@ export class EventTypesController {
   @UseGuards(JwtAuthGuard)
   create(@CurrentCoach() coach: Coach, @Body() dto: CreateEventTypeDto) {
     return this.eventTypesService.create(coach, dto);
+  }
+
+  // Declared before ':id' so Nest doesn't match "reorder" as an :id param.
+  @ApiBearerAuth()
+  @Patch('reorder')
+  @UseGuards(JwtAuthGuard)
+  reorder(@CurrentCoach() coach: Coach, @Body() dto: ReorderEventTypesDto) {
+    return this.eventTypesService.reorder(coach, dto.ids);
   }
 
   @ApiBearerAuth()

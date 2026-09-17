@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CoachRole, type Coach } from '@prisma/client';
 import { CurrentCoach } from '../auth/current-coach.decorator.js';
@@ -36,5 +44,16 @@ export class CoachesController {
   @Roles(CoachRole.ADMIN)
   create(@Body() dto: CreateCoachDto) {
     return this.coachesService.create(dto);
+  }
+
+  // Forces the target coach to log in again on every device: any access
+  // token issued before now stops working immediately (see JwtAuthGuard).
+  // The only lever available for a leaked token or an offboarded coach,
+  // since tokens are otherwise valid for their full 30-day TTL.
+  @Patch(':id/revoke-sessions')
+  @UseGuards(RolesGuard)
+  @Roles(CoachRole.ADMIN)
+  revokeSessions(@Param('id') id: string) {
+    return this.coachesService.revokeSessions(id);
   }
 }

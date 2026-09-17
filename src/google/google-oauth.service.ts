@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +16,8 @@ const CALENDAR_SCOPES = ['https://www.googleapis.com/auth/calendar.events'];
 
 @Injectable()
 export class GoogleOAuthService {
+  private readonly logger = new Logger(GoogleOAuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
@@ -29,12 +32,13 @@ export class GoogleOAuthService {
     );
   }
 
-  getAuthUrl(): string {
+  getAuthUrl(state: string): string {
     const client = this.newOAuthClient();
     return client.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent',
       scope: CALENDAR_SCOPES,
+      state,
     });
   }
 
@@ -68,6 +72,11 @@ export class GoogleOAuthService {
         connectedAt: new Date(),
       },
     });
+    // Worth its own log line regardless of level: this changes which Google
+    // account every future Meet-link booking is created in.
+    this.logger.log(
+      `Google Calendar connected: ${userInfo.email ?? 'unknown'}`,
+    );
   }
 
   async status(): Promise<{

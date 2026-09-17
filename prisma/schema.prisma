@@ -39,6 +39,11 @@ model Coach {
   role            CoachRole @default(COACH)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  // Access tokens issued (JWT `iat`) before this timestamp are rejected --
+  // lets an admin force-deauthorize a coach's existing sessions without
+  // needing a server-side token store, since the 30-day JWT itself has no
+  // other revocation path.
+  sessionsRevokedAt DateTime?
 
   eventTypes           EventType[]
   weeklyAvailabilities WeeklyAvailability[]

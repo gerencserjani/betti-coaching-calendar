@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -14,7 +13,6 @@ import type { MinuteRange } from '../availability/availability.types.js';
 import {
   BookingStatus,
   CancelledBy,
-  CoachRole,
   LocationType,
   Prisma,
   type Coach,
@@ -25,6 +23,8 @@ import {
   type BookingWithRelations,
 } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { runSerializable } from '../common/serializable-transaction.util.js';
+import { assertCoachOwnsOrIsAdmin } from '../common/ownership.util.js';
 import { SettingsService } from '../settings/settings.service.js';
 import type {
   ClientCancelBookingDto,
@@ -34,7 +34,6 @@ import type { CreateBookingDto } from './dto/create-booking.dto.js';
 import type { RescheduleBookingDto } from './dto/reschedule-booking.dto.js';
 
 const MANAGE_TOKEN_LENGTH = 32;
-const SERIALIZATION_RETRY_ATTEMPTS = 3;
 const BOOKING_INCLUDE = { eventType: true, coach: true } as const;
 
 @Injectable()
@@ -94,7 +93,7 @@ export class BookingsService {
     const endAt = startAt.plus({ minutes: eventType.durationMinutes });
     this.assertSameCalendarDay(startAt, endAt, timezone);
 
-    let booking = await this.runSerializable(async (tx) => {
+    let booking = await runSerializable(this.prisma, async (tx) => {
       await this.assertSlotIsBookable(
         tx,
         eventType.coachId,
@@ -160,16 +159,11 @@ export class BookingsService {
     bookingId: string,
     dto: CoachCancelBookingDto,
   ): Promise<BookingWithRelations> {
-    const booking = await this.prisma.booking.findUnique({
+    const found = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: BOOKING_INCLUDE,
     });
-    if (!booking) {
-      throw new NotFoundException('Booking not found');
-    }
-    if (booking.coachId !== coach.id && coach.role !== CoachRole.ADMIN) {
-      throw new ForbiddenException('Not the owner of this booking');
-    }
+    const booking = assertCoachOwnsOrIsAdmin(coach, found, 'Booking not found');
     this.assertConfirmed(booking);
 
     const updated = await this.applyCancellation(
@@ -210,7 +204,7 @@ export class BookingsService {
     const endAt = startAt.plus({ minutes: durationMinutes });
     this.assertSameCalendarDay(startAt, endAt, timezone);
 
-    let updated = await this.runSerializable(async (tx) => {
+    let updated = await runSerializable(this.prisma, async (tx) => {
       await this.assertSlotIsBookable(
         tx,
         booking.coachId,
@@ -230,8 +224,21 @@ export class BookingsService {
     if (updated.location === LocationType.GOOGLE_MEET) {
       if (updated.googleEventId) {
         await this.googleCalendarService.deleteEvent(updated.googleEventId);
+        // Clear the now-dangling reference before attempting to create the
+        // replacement event, so a failure below can't leave the booking
+        // pointing at a Google event that no longer exists.
+        updated = await this.prisma.booking.update({
+          where: { id: updated.id },
+          data: { meetLink: null, googleEventId: null },
+          include: BOOKING_INCLUDE,
+        });
       }
-      updated = await this.attachFreshMeetLink(updated);
+      // deleteOnFailure: false -- this booking already existed and was
+      // confirmed before the reschedule; a transient Google API failure here
+      // must not delete the client's booking outright (see attachFreshMeetLink).
+      updated = await this.attachFreshMeetLink(updated, {
+        deleteOnFailure: false,
+      });
     }
 
     this.notificationsService
@@ -264,6 +271,7 @@ export class BookingsService {
 
   private async attachFreshMeetLink(
     booking: BookingWithRelations,
+    options: { deleteOnFailure: boolean } = { deleteOnFailure: true },
   ): Promise<BookingWithRelations> {
     try {
       const meet = await this.googleCalendarService.createMeetEvent({
@@ -279,13 +287,29 @@ export class BookingsService {
         include: BOOKING_INCLUDE,
       });
     } catch (error) {
+      if (options.deleteOnFailure) {
+        // Only safe when called from create(): the booking was never
+        // confirmed to the client, so nothing of value is lost by undoing it.
+        this.logger.error(
+          'Failed to create Google Meet link, rolling back booking',
+          error,
+        );
+        await this.prisma.booking.delete({ where: { id: booking.id } });
+        throw new ServiceUnavailableException(
+          'Could not create the Google Meet link, please try again',
+        );
+      }
+      // Called from rescheduleByClient(): the booking already existed and
+      // was already confirmed, and its new time is already committed -
+      // deleting it here would destroy a real, previously-confirmed booking
+      // over a transient Google API error. Leave it in place without a Meet
+      // link instead and surface a clear error asking the client to retry.
       this.logger.error(
-        'Failed to create Google Meet link, rolling back booking',
+        'Failed to regenerate Google Meet link after reschedule; booking kept, link missing',
         error,
       );
-      await this.prisma.booking.delete({ where: { id: booking.id } });
       throw new ServiceUnavailableException(
-        'Could not create the Google Meet link, please try again',
+        'The booking time was updated, but the Google Meet link could not be regenerated. Please contact us so we can send the new link.',
       );
     }
   }
@@ -366,30 +390,5 @@ export class BookingsService {
         'Selected time was just booked - please pick another slot',
       );
     }
-  }
-
-  private async runSerializable<T>(
-    fn: (tx: Prisma.TransactionClient) => Promise<T>,
-  ): Promise<T> {
-    for (let attempt = 1; attempt <= SERIALIZATION_RETRY_ATTEMPTS; attempt++) {
-      try {
-        return await this.prisma.$transaction(fn, {
-          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        });
-      } catch (error) {
-        const isSerializationFailure =
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2034';
-        if (
-          !isSerializationFailure ||
-          attempt === SERIALIZATION_RETRY_ATTEMPTS
-        ) {
-          throw error;
-        }
-      }
-    }
-    throw new ConflictException(
-      'Could not complete the booking, please try again',
-    );
   }
 }

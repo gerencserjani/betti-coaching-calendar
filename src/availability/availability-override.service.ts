@@ -1,15 +1,9 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { runSerializable } from '../common/serializable-transaction.util.js';
+import { assertCoachOwnsOrIsAdmin } from '../common/ownership.util.js';
 import { SettingsService } from '../settings/settings.service.js';
-import {
-  CoachRole,
-  type AvailabilityOverride,
-  type Coach,
-} from '@prisma/client';
+import type { AvailabilityOverride, Coach } from '@prisma/client';
 import { AvailabilityService, toDateOnly } from './availability.service.js';
 import type { CreateAvailabilityOverrideDto } from './dto/create-availability-override.dto.js';
 import type { UpdateAvailabilityOverrideDto } from './dto/update-availability-override.dto.js';
@@ -46,12 +40,24 @@ export class AvailabilityOverrideService {
       }
 
       const settings = await this.settingsService.get();
-      await this.availabilityService.assertNoCrossCoachConflictForDate(
-        coach.id,
-        dto.date,
-        settings.businessTimezone,
-        { startMinute: dto.startMinute, endMinute: dto.endMinute },
-      );
+      return runSerializable(this.prisma, async (tx) => {
+        await this.availabilityService.assertNoCrossCoachConflictForDate(
+          coach.id,
+          dto.date,
+          settings.businessTimezone,
+          { startMinute: dto.startMinute!, endMinute: dto.endMinute! },
+          tx,
+        );
+        return tx.availabilityOverride.create({
+          data: {
+            coachId: coach.id,
+            date: toDateOnly(dto.date),
+            isUnavailable,
+            startMinute: dto.startMinute,
+            endMinute: dto.endMinute,
+          },
+        });
+      });
     }
 
     return this.prisma.availabilityOverride.create({
@@ -59,8 +65,8 @@ export class AvailabilityOverrideService {
         coachId: coach.id,
         date: toDateOnly(dto.date),
         isUnavailable,
-        startMinute: isUnavailable ? null : dto.startMinute,
-        endMinute: isUnavailable ? null : dto.endMinute,
+        startMinute: null,
+        endMinute: null,
       },
     });
   }
@@ -92,12 +98,24 @@ export class AvailabilityOverrideService {
       }
 
       const settings = await this.settingsService.get();
-      await this.availabilityService.assertNoCrossCoachConflictForDate(
-        coach.id,
-        isoDate,
-        settings.businessTimezone,
-        { startMinute, endMinute },
-      );
+      return runSerializable(this.prisma, async (tx) => {
+        await this.availabilityService.assertNoCrossCoachConflictForDate(
+          coach.id,
+          isoDate,
+          settings.businessTimezone,
+          { startMinute, endMinute },
+          tx,
+        );
+        return tx.availabilityOverride.update({
+          where: { id },
+          data: {
+            date: toDateOnly(isoDate),
+            isUnavailable,
+            startMinute,
+            endMinute,
+          },
+        });
+      });
     }
 
     return this.prisma.availabilityOverride.update({
@@ -123,9 +141,10 @@ export class AvailabilityOverrideService {
     const row = await this.prisma.availabilityOverride.findUnique({
       where: { id },
     });
-    if (!row || (row.coachId !== coach.id && coach.role !== CoachRole.ADMIN)) {
-      throw new NotFoundException('Availability override not found');
-    }
-    return row;
+    return assertCoachOwnsOrIsAdmin(
+      coach,
+      row,
+      'Availability override not found',
+    );
   }
 }

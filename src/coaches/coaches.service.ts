@@ -39,4 +39,11 @@ export class CoachesService {
       },
     });
   }
+
+  revokeSessions(coachId: string): Promise<Coach> {
+    return this.prisma.coach.update({
+      where: { id: coachId },
+      data: { sessionsRevokedAt: new Date() },
+    });
+  }
 }

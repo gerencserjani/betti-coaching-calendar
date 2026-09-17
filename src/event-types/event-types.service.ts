@@ -1,11 +1,11 @@
 import {
+  BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CoachRole, Prisma, type Coach, type EventType } from '@prisma/client';
+import { assertCoachOwnsOrIsAdmin } from '../common/ownership.util.js';
+import { Prisma, type Coach, type EventType } from '@prisma/client';
 import type { CreateEventTypeDto } from './dto/create-event-type.dto.js';
 import type { UpdateEventTypeDto } from './dto/update-event-type.dto.js';
 
@@ -88,6 +88,31 @@ export class EventTypesService {
     }
   }
 
+  /**
+   * Applies a full new display order in one atomic transaction, so a
+   * mid-batch failure can't leave some positions updated and others not
+   * (which independent per-item PATCH calls from the client could do).
+   */
+  async reorder(coach: Coach, ids: string[]): Promise<void> {
+    const owned = await this.prisma.eventType.findMany({
+      where: { id: { in: ids }, coachId: coach.id },
+      select: { id: true },
+    });
+    if (owned.length !== ids.length) {
+      throw new BadRequestException(
+        'One or more event types were not found or are not yours',
+      );
+    }
+    await this.prisma.$transaction(
+      ids.map((id, index) =>
+        this.prisma.eventType.update({
+          where: { id },
+          data: { position: index },
+        }),
+      ),
+    );
+  }
+
   private async assertOwnership(
     coach: Coach,
     eventTypeId: string,
@@ -95,12 +120,6 @@ export class EventTypesService {
     const eventType = await this.prisma.eventType.findUnique({
       where: { id: eventTypeId },
     });
-    if (!eventType) {
-      throw new NotFoundException('Event type not found');
-    }
-    if (eventType.coachId !== coach.id && coach.role !== CoachRole.ADMIN) {
-      throw new ForbiddenException('Not the owner of this event type');
-    }
-    return eventType;
+    return assertCoachOwnsOrIsAdmin(coach, eventType, 'Event type not found');
   }
 }

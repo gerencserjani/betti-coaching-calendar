@@ -1,10 +1,8 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CoachRole, type Coach, type WeeklyAvailability } from '@prisma/client';
+import { runSerializable } from '../common/serializable-transaction.util.js';
+import { assertCoachOwnsOrIsAdmin } from '../common/ownership.util.js';
+import type { Coach, WeeklyAvailability } from '@prisma/client';
 import { AvailabilityService } from './availability.service.js';
 import type { CreateWeeklyAvailabilityDto } from './dto/create-weekly-availability.dto.js';
 import type { UpdateWeeklyAvailabilityDto } from './dto/update-weekly-availability.dto.js';
@@ -28,14 +26,19 @@ export class WeeklyAvailabilityService {
     dto: CreateWeeklyAvailabilityDto,
   ): Promise<WeeklyAvailability> {
     this.assertValidRange(dto.startMinute, dto.endMinute);
-    await this.availabilityService.assertNoCrossCoachConflictForWeekday(
-      coach.id,
-      dto.weekday,
-      dto,
-    );
-
-    return this.prisma.weeklyAvailability.create({
-      data: { ...dto, coachId: coach.id },
+    // The conflict check (read) and the create (write) run inside the same
+    // SERIALIZABLE transaction so two concurrent creates can't both pass the
+    // check and commit overlapping availability for different coaches.
+    return runSerializable(this.prisma, async (tx) => {
+      await this.availabilityService.assertNoCrossCoachConflictForWeekday(
+        coach.id,
+        dto.weekday,
+        dto,
+        tx,
+      );
+      return tx.weeklyAvailability.create({
+        data: { ...dto, coachId: coach.id },
+      });
     });
   }
 
@@ -51,15 +54,17 @@ export class WeeklyAvailabilityService {
     const endMinute = dto.endMinute ?? existing.endMinute;
 
     this.assertValidRange(startMinute, endMinute);
-    await this.availabilityService.assertNoCrossCoachConflictForWeekday(
-      coach.id,
-      weekday,
-      { startMinute, endMinute },
-    );
-
-    return this.prisma.weeklyAvailability.update({
-      where: { id },
-      data: { weekday, startMinute, endMinute },
+    return runSerializable(this.prisma, async (tx) => {
+      await this.availabilityService.assertNoCrossCoachConflictForWeekday(
+        coach.id,
+        weekday,
+        { startMinute, endMinute },
+        tx,
+      );
+      return tx.weeklyAvailability.update({
+        where: { id },
+        data: { weekday, startMinute, endMinute },
+      });
     });
   }
 
@@ -75,13 +80,11 @@ export class WeeklyAvailabilityService {
     const row = await this.prisma.weeklyAvailability.findUnique({
       where: { id },
     });
-    if (!row) {
-      throw new NotFoundException('Weekly availability entry not found');
-    }
-    if (row.coachId !== coach.id && coach.role !== CoachRole.ADMIN) {
-      throw new NotFoundException('Weekly availability entry not found');
-    }
-    return row;
+    return assertCoachOwnsOrIsAdmin(
+      coach,
+      row,
+      'Weekly availability entry not found',
+    );
   }
 
   private assertValidRange(startMinute: number, endMinute: number) {

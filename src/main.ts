@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
+import { PrismaExceptionFilter } from './common/prisma-exception.filter.js';
 import { StripPasswordHashInterceptor } from './common/strip-password-hash.interceptor.js';
 import type { AppConfig } from './config/configuration.js';
 import { buildOpenApiDocument } from './swagger.js';
@@ -22,6 +23,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalInterceptors(new StripPasswordHashInterceptor());
+  app.useGlobalFilters(new PrismaExceptionFilter());
 
   // Interactive docs at /docs, raw spec at /docs-json (and /docs-yaml) - a
   // frontend agent can fetch /docs-json directly instead of reading source.

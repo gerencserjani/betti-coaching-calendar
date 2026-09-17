@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { Coach } from '@prisma/client';
 import { PasswordService } from './password.service.js';
@@ -6,6 +6,8 @@ import { TokenService } from './token.service.js';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
@@ -21,9 +23,13 @@ export class AuthService {
       !coach ||
       !(await this.passwordService.compare(password, coach.passwordHash))
     ) {
+      // warn, not error -- expected to happen (typos), and it's also the
+      // login-brute-force signal an operator would actually want to notice.
+      this.logger.warn(`Failed login attempt for ${email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    this.logger.log(`Login: ${coach.email} (${coach.id})`);
     const accessToken = this.tokenService.sign({
       sub: coach.id,
       email: coach.email,

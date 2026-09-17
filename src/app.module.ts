@@ -1,11 +1,14 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AvailabilityModule } from './availability/availability.module.js';
 import { BookingsModule } from './bookings/bookings.module.js';
 import { CoachesModule } from './coaches/coaches.module.js';
+import { RequestLoggingMiddleware } from './common/request-logging.middleware.js';
 import configuration from './config/configuration.js';
 import { validateEnv } from './config/env.validation.js';
 import { EventTypesModule } from './event-types/event-types.module.js';
@@ -23,6 +26,11 @@ import { SlotsModule } from './slots/slots.module.js';
       load: [configuration],
       validate: validateEnv,
     }),
+    // Sane default for every route; the handful of public, higher-risk
+    // endpoints (login, bookings, slots) set tighter per-route limits via
+    // @Throttle. Keyed by IP by default, which is what ThrottlerGuard does
+    // out of the box.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     PrismaModule,
     I18nModule,
     AuthModule,
@@ -36,6 +44,10 @@ import { SlotsModule } from './slots/slots.module.js';
     BookingsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestLoggingMiddleware).forRoutes('*');
+  }
+}

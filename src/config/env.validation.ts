@@ -69,5 +69,16 @@ export function validateEnv(config: Record<string, unknown>) {
     throw new Error(`Invalid environment configuration: ${message}`);
   }
 
+  // class-validator only checks that ENCRYPTION_KEY is a string; AES-256-GCM
+  // (see common/crypto.util.ts) needs it to decode from base64 to exactly 32
+  // bytes, or every encrypt/decrypt call throws at first use instead of at
+  // boot -- most confusingly, the first time someone connects Google Calendar.
+  const keyBytes = Buffer.from(validated.ENCRYPTION_KEY, 'base64').length;
+  if (keyBytes !== 32) {
+    throw new Error(
+      `Invalid environment configuration: ENCRYPTION_KEY must decode from base64 to exactly 32 bytes for AES-256 (got ${keyBytes})`,
+    );
+  }
+
   return validated;
 }

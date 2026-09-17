@@ -61,14 +61,18 @@ export class SlotsService {
       select: { startAt: true, endAt: true },
     });
 
+    const rangesByDate =
+      await this.availabilityService.getEffectiveRangesForDateRange(
+        eventType.coachId,
+        from.toISODate()!,
+        to.toISODate()!,
+        timezone,
+      );
+
     const slots: Slot[] = [];
     for (let day = from; day <= to; day = day.plus({ days: 1 })) {
       const isoDate = day.toISODate()!;
-      const ranges = await this.availabilityService.getEffectiveRangesForDate(
-        eventType.coachId,
-        isoDate,
-        timezone,
-      );
+      const ranges = rangesByDate.get(isoDate) ?? [];
 
       for (const range of ranges) {
         for (
@@ -76,7 +80,16 @@ export class SlotsService {
           startMinute + eventType.durationMinutes <= range.endMinute;
           startMinute += eventType.durationMinutes
         ) {
-          const startAt = day.plus({ minutes: startMinute });
+          // Wall-clock arithmetic (set hour/minute), not elapsed-time
+          // arithmetic (plus minutes) -- `day` may fall on a DST transition,
+          // where adding elapsed minutes to midnight lands on the wrong
+          // wall-clock hour.
+          const startAt = day.set({
+            hour: Math.floor(startMinute / 60),
+            minute: startMinute % 60,
+            second: 0,
+            millisecond: 0,
+          });
           const endAt = startAt.plus({ minutes: eventType.durationMinutes });
 
           if (startAt < now) {

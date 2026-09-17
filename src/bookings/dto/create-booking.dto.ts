@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsPhoneNumber,
   IsString,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 import { LocationType } from '@prisma/client';
@@ -22,6 +23,7 @@ export class CreateBookingDto {
 
   @IsString()
   @MinLength(1)
+  @MaxLength(200)
   clientName!: string;
 
   @IsEmail()
@@ -32,6 +34,7 @@ export class CreateBookingDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   clientNote?: string;
 
   @IsIn(['hu', 'en'])
