@@ -1,3 +1,9 @@
+# [1.5.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.4.0...v1.5.0) (2026-09-17)
+
+### Features
+
+- add update endpoints for weekly availability and date overrides ([45b09e6](https://github.com/gerencserjani/betti-coaching-calendar/commit/45b09e6a12a49b2bfc22290a487be5d9656c2ed5))
+
 # [1.4.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.3.0...v1.4.0) (2026-09-17)
 
 ### Features
