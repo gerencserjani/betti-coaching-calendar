@@ -28,6 +28,11 @@ export interface BookingEmailButton {
   url: string;
 }
 
+export interface BookingEmailLink {
+  label: string;
+  url: string;
+}
+
 export interface BookingEmailProps {
   previewText: string;
   heading: string;
@@ -37,6 +42,10 @@ export interface BookingEmailProps {
   note?: BookingEmailDetail;
   primaryButton?: BookingEmailButton;
   secondaryButton?: BookingEmailButton;
+  /** Small text links (cancel / reschedule) near the footer, deliberately
+   * not styled as buttons -- these are secondary, low-emphasis actions most
+   * recipients never need to use. */
+  manageLinks?: BookingEmailLink[];
   helperText?: string;
   footer: string;
 }
@@ -50,6 +59,7 @@ export function BookingEmail({
   note,
   primaryButton,
   secondaryButton,
+  manageLinks,
   helperText,
   footer,
 }: BookingEmailProps) {
@@ -126,6 +136,28 @@ export function BookingEmail({
               </Section>
             )}
 
+            {manageLinks && manageLinks.length > 0 && (
+              <Text style={styles.manageLinksRow} className="bcc-manage-links">
+                {manageLinks.map((link, i) => (
+                  <React.Fragment key={link.label}>
+                    {i > 0 && (
+                      <span style={styles.manageLinksSep} className="bcc-manage-links">
+                        {' '}
+                        ·{' '}
+                      </span>
+                    )}
+                    <a
+                      href={link.url}
+                      style={styles.manageLink}
+                      className="bcc-manage-links"
+                    >
+                      {link.label}
+                    </a>
+                  </React.Fragment>
+                ))}
+              </Text>
+            )}
+
             <Hr style={styles.hr} className="bcc-hr" />
             <Text style={styles.footerText} className="bcc-footer">
               {footer}
@@ -184,6 +216,7 @@ const fontAndDarkModeCss = `
     .bcc-note { background-color: ${dark.bgPanel} !important; border-color: ${dark.accentSoft} !important; }
     .bcc-hr { border-color: ${dark.line} !important; }
     .bcc-footer { color: ${dark.inkSoft} !important; }
+    .bcc-manage-links { color: ${dark.inkSoft} !important; }
     .bcc-button-secondary { background-color: ${dark.bgCard} !important; color: ${dark.ink} !important; border-color: ${dark.line} !important; }
   }
 `;
@@ -285,6 +318,14 @@ const styles = {
     margin: '0 8px',
     display: 'inline-block',
   },
+  manageLinksRow: {
+    textAlign: 'center' as const,
+    marginTop: '24px',
+    fontSize: '13px',
+    color: light.inkSoft,
+  },
+  manageLink: { color: light.inkSoft, textDecoration: 'underline' },
+  manageLinksSep: { color: light.line },
   hr: { borderColor: light.line, marginTop: '32px' },
   footerText: { fontSize: '12px', color: light.inkSoft },
 };

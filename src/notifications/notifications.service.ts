@@ -113,7 +113,13 @@ export class NotificationsService {
       meetLink: booking.meetLink ?? undefined,
       clientPhone: booking.clientPhone,
       timezone: settings.businessTimezone,
-      manageUrl: `${frontendUrl}/bookings/manage?token=${booking.manageToken}`,
+      // The frontend has no /bookings/manage route -- the manage UI lives
+      // inline in the booking section on the homepage, reading a `manage`
+      // query param (see Booking.tsx). No hash here: the content builder
+      // appends an `action` query param plus the #idopontfoglalas hash
+      // (which must come after all query params, or it'd be swallowed
+      // into the fragment instead of the query string).
+      manageUrl: `${frontendUrl}/?manage=${booking.manageToken}`,
       googleCalendarUrl: buildGoogleCalendarQuickAddUrl({
         title: booking.eventType.title,
         description: booking.clientNote ?? undefined,

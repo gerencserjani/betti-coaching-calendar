@@ -11,13 +11,14 @@
   "email.common.locationGoogleMeet": "Google Meet – {{link}}",
   "email.common.locationPhone": "Telefonos hívás – {{phone}}",
   "email.common.buttonAddToGoogleCalendar": "Hozzáadás a Google Naptárhoz",
-  "email.common.buttonManageBooking": "Foglalás kezelése",
+  "email.common.linkCancelBooking": "Lemondás",
+  "email.common.linkRescheduleBooking": "Időpont módosítása",
 
   "email.bookingConfirmed.client.subject": "Foglalásod visszaigazolva – {{title}}",
   "email.bookingConfirmed.client.preview": "Visszaigazoltuk az időpontodat: {{title}}",
   "email.bookingConfirmed.client.heading": "Visszaigazoltuk az időpontodat",
   "email.bookingConfirmed.client.intro": "Szia {{name}}! Az alábbi időpontot sikeresen lefoglaltad.",
-  "email.bookingConfirmed.client.manageHint": "Ha mégsem tudsz részt venni, az alábbi gombbal bármikor lemondhatod vagy új időpontra módosíthatod a foglalást.",
+  "email.bookingConfirmed.client.manageHint": "Ha mégsem tudsz részt venni, lent bármikor lemondhatod vagy új időpontra módosíthatod a foglalást.",
 
   "email.bookingConfirmed.coach.subject": "Új foglalás érkezett – {{title}}",
   "email.bookingConfirmed.coach.preview": "{{clientName}} lefoglalt egy időpontot nálad",
@@ -43,7 +44,7 @@
   "email.bookingRescheduled.client.preview": "A foglalásod új időpontra került",
   "email.bookingRescheduled.client.heading": "A foglalásod új időpontra került",
   "email.bookingRescheduled.client.intro": "Az alábbi új időpontra módosítottad a foglalásodat.",
-  "email.bookingRescheduled.client.manageHint": "Ha ez az időpont mégsem jó, az alábbi gombbal bármikor módosíthatod vagy lemondhatod.",
+  "email.bookingRescheduled.client.manageHint": "Ha ez az időpont mégsem jó, lent bármikor módosíthatod vagy lemondhatod.",
 
   "email.bookingRescheduled.coach.subject": "Módosított időpont – {{title}}",
   "email.bookingRescheduled.coach.preview": "{{clientName}} új időpontra módosította a foglalását",

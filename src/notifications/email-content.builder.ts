@@ -53,14 +53,11 @@ export class EmailContentBuilder {
           detailsHeading: t('email.common.detailsHeading'),
           details,
           helperText: t('email.bookingConfirmed.client.manageHint'),
-          primaryButton: {
-            label: t('email.common.buttonManageBooking'),
-            url: ctx.manageUrl,
-          },
           secondaryButton: {
             label: t('email.common.buttonAddToGoogleCalendar'),
             url: ctx.googleCalendarUrl,
           },
+          manageLinks: this.buildManageLinks(ctx, t),
           footer: t('email.common.footer'),
         },
       };
@@ -169,14 +166,11 @@ export class EmailContentBuilder {
           detailsHeading: t('email.common.detailsHeading'),
           details,
           helperText: t('email.bookingRescheduled.client.manageHint'),
-          primaryButton: {
-            label: t('email.common.buttonManageBooking'),
-            url: ctx.manageUrl,
-          },
           secondaryButton: {
             label: t('email.common.buttonAddToGoogleCalendar'),
             url: ctx.googleCalendarUrl,
           },
+          manageLinks: this.buildManageLinks(ctx, t),
           footer: t('email.common.footer'),
         },
       };
@@ -203,6 +197,22 @@ export class EmailContentBuilder {
         footer: t('email.common.footer'),
       },
     };
+  }
+
+  private buildManageLinks(
+    ctx: BookingEmailContext,
+    t: (key: string, vars?: Record<string, string | number>) => string,
+  ) {
+    return [
+      {
+        label: t('email.common.linkCancelBooking'),
+        url: `${ctx.manageUrl}&action=cancel#idopontfoglalas`,
+      },
+      {
+        label: t('email.common.linkRescheduleBooking'),
+        url: `${ctx.manageUrl}&action=reschedule#idopontfoglalas`,
+      },
+    ];
   }
 
   private buildDetails(ctx: BookingEmailContext, locale: string) {

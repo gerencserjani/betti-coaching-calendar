@@ -11,13 +11,14 @@
   "email.common.locationGoogleMeet": "Google Meet – {{link}}",
   "email.common.locationPhone": "Phone call – {{phone}}",
   "email.common.buttonAddToGoogleCalendar": "Add to Google Calendar",
-  "email.common.buttonManageBooking": "Manage booking",
+  "email.common.linkCancelBooking": "Cancel",
+  "email.common.linkRescheduleBooking": "Change time",
 
   "email.bookingConfirmed.client.subject": "Booking confirmed – {{title}}",
   "email.bookingConfirmed.client.preview": "Your booking is confirmed: {{title}}",
   "email.bookingConfirmed.client.heading": "Your booking is confirmed",
   "email.bookingConfirmed.client.intro": "Hi {{name}}! You've successfully booked the appointment below.",
-  "email.bookingConfirmed.client.manageHint": "If you can no longer make it, use the button below to cancel or reschedule at any time.",
+  "email.bookingConfirmed.client.manageHint": "If you can no longer make it, you can cancel or reschedule at any time below.",
 
   "email.bookingConfirmed.coach.subject": "New booking – {{title}}",
   "email.bookingConfirmed.coach.preview": "{{clientName}} booked a session with you",
@@ -43,7 +44,7 @@
   "email.bookingRescheduled.client.preview": "Your booking moved to a new time",
   "email.bookingRescheduled.client.heading": "Your booking moved to a new time",
   "email.bookingRescheduled.client.intro": "You rescheduled your booking to the new time below.",
-  "email.bookingRescheduled.client.manageHint": "If this time doesn't work either, use the button below to change or cancel it.",
+  "email.bookingRescheduled.client.manageHint": "If this time doesn't work either, you can change or cancel it below.",
 
   "email.bookingRescheduled.coach.subject": "Rescheduled – {{title}}",
   "email.bookingRescheduled.coach.preview": "{{clientName}} rescheduled their booking",
