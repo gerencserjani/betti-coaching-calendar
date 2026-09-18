@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import type { Job } from 'pg-boss';
+import type { JobWithMetadata } from 'pg-boss';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   NotificationsService,
@@ -44,8 +44,8 @@ export class NotificationJobsService implements OnModuleInit {
     });
     await boss.work(
       QUEUE_NAME,
-      { batchSize: 1 },
-      async (jobs: Job<NotificationJobData>[]) => {
+      { batchSize: 1, includeMetadata: true },
+      async (jobs: JobWithMetadata<NotificationJobData>[]) => {
         const job = jobs[0];
         if (job) {
           await this.process(job);
@@ -55,11 +55,23 @@ export class NotificationJobsService implements OnModuleInit {
   }
 
   async enqueue(bookingId: string, kind: NotificationKind): Promise<void> {
-    await this.pgBossService.boss.send(QUEUE_NAME, { bookingId, kind });
+    const jobId = await this.pgBossService.boss.send(QUEUE_NAME, {
+      bookingId,
+      kind,
+    });
+    this.logger.log(
+      `Enqueued ${kind} notification job ${jobId} for booking ${bookingId}`,
+    );
   }
 
-  private async process(job: Job<NotificationJobData>): Promise<void> {
+  private async process(
+    job: JobWithMetadata<NotificationJobData>,
+  ): Promise<void> {
     const { bookingId, kind } = job.data;
+    this.logger.log(
+      `Processing ${kind} notification job ${job.id} for booking ${bookingId} (attempt ${job.retryCount + 1}/${job.retryLimit + 1})`,
+    );
+
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
       include: BOOKING_INCLUDE,
@@ -73,16 +85,30 @@ export class NotificationJobsService implements OnModuleInit {
     }
 
     const typed = booking as BookingWithRelations;
-    switch (kind) {
-      case 'confirmed':
-        await this.notificationsService.notifyBookingConfirmed(typed);
-        return;
-      case 'cancelled':
-        await this.notificationsService.notifyBookingCancelled(typed);
-        return;
-      case 'rescheduled':
-        await this.notificationsService.notifyBookingRescheduled(typed);
-        return;
+    try {
+      switch (kind) {
+        case 'confirmed':
+          await this.notificationsService.notifyBookingConfirmed(typed);
+          break;
+        case 'cancelled':
+          await this.notificationsService.notifyBookingCancelled(typed);
+          break;
+        case 'rescheduled':
+          await this.notificationsService.notifyBookingRescheduled(typed);
+          break;
+      }
+      this.logger.log(
+        `Sent ${kind} notification emails for booking ${bookingId}`,
+      );
+    } catch (error) {
+      // Log immediately, with the real error, rather than leaving this only
+      // discoverable by querying pgboss.job's `output` column directly --
+      // rethrow so pg-boss's own retry/backoff still applies as configured.
+      this.logger.error(
+        `Failed to send ${kind} notification for booking ${bookingId} (job ${job.id}, attempt ${job.retryCount + 1}/${job.retryLimit + 1})`,
+        error,
+      );
+      throw error;
     }
   }
 }

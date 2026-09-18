@@ -35,23 +35,30 @@ describe('EmailContentBuilder', () => {
   });
 
   describe('buildConfirmed', () => {
-    it('builds client content with both a manage and a calendar button', () => {
+    it('builds client content with manage links and a calendar button', () => {
       const { subject, props } = builder.buildConfirmed(
         baseContext(),
         'client',
         'hu',
       );
       expect(subject).toContain('Kezdő konzultáció');
-      expect(props.primaryButton?.url).toBe(
-        'https://example.com/manage?token=abc',
-      );
+      expect(props.manageLinks).toEqual([
+        {
+          label: 'Lemondás',
+          url: 'https://example.com/manage?token=abc&action=cancel#idopontfoglalas',
+        },
+        {
+          label: 'Időpont módosítása',
+          url: 'https://example.com/manage?token=abc&action=reschedule#idopontfoglalas',
+        },
+      ]);
       expect(props.secondaryButton?.url).toContain('calendar.google.com');
       expect(props.details).toHaveLength(4);
     });
 
-    it('builds coach content without a manage button (only the coach-facing calendar link)', () => {
+    it('builds coach content without manage links (only the coach-facing calendar link)', () => {
       const { props } = builder.buildConfirmed(baseContext(), 'coach', 'hu');
-      expect(props.primaryButton).toBeUndefined();
+      expect(props.manageLinks).toBeUndefined();
       expect(props.secondaryButton?.url).toContain('calendar.google.com');
     });
 
@@ -134,6 +141,17 @@ describe('EmailContentBuilder', () => {
       );
       expect(byClient.props.intro).not.toBe(byCoach.props.intro);
     });
+
+    it('names the coach instead of the generic "the coach" when they cancel', () => {
+      const { props } = builder.buildCancelled(
+        baseContext({ cancelledBy: CancelledBy.COACH }),
+        'client',
+        'hu',
+      );
+      expect(props.intro).toBe(
+        'Sajnálattal értesítünk, hogy Gerencsér Bernadett lemondta az alábbi időpontodat.',
+      );
+    });
   });
 
   describe('buildRescheduled', () => {
@@ -141,6 +159,20 @@ describe('EmailContentBuilder', () => {
       const { props } = builder.buildRescheduled(baseContext(), 'client', 'hu');
       const dateTime = props.details.find((d) => d.label === 'Időpont');
       expect(dateTime?.value).toContain('2026');
+    });
+
+    it('reminds the client to update their calendar since the quick-add link creates a fresh event', () => {
+      const { props } = builder.buildRescheduled(baseContext(), 'client', 'hu');
+      expect(props.calendarNote).toBe(
+        'Ha a korábbi időpontot már hozzáadtad a naptáradhoz, kérjük töröld azt, és vedd fel helyette az újat a fenti gombbal.',
+      );
+    });
+
+    it('also reminds the coach, since they get the same quick-add button', () => {
+      const { props } = builder.buildRescheduled(baseContext(), 'coach', 'hu');
+      expect(props.calendarNote).toBe(
+        'Ha a korábbi időpontot már hozzáadtad a naptáradhoz, kérjük töröld azt, és vedd fel helyette az újat a fenti gombbal.',
+      );
     });
   });
 });

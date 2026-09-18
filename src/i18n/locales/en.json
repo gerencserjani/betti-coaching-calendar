@@ -11,13 +11,15 @@
   "email.common.locationGoogleMeet": "Google Meet – {{link}}",
   "email.common.locationPhone": "Phone call – {{phone}}",
   "email.common.buttonAddToGoogleCalendar": "Add to Google Calendar",
-  "email.common.buttonManageBooking": "Manage booking",
+  "email.common.linkCancelBooking": "Cancel",
+  "email.common.linkRescheduleBooking": "Change time",
+  "email.common.calendarUpdateHint": "If you already added the previous time to your calendar, please delete it and add the new one using the button above.",
 
   "email.bookingConfirmed.client.subject": "Booking confirmed – {{title}}",
   "email.bookingConfirmed.client.preview": "Your booking is confirmed: {{title}}",
   "email.bookingConfirmed.client.heading": "Your booking is confirmed",
   "email.bookingConfirmed.client.intro": "Hi {{name}}! You've successfully booked the appointment below.",
-  "email.bookingConfirmed.client.manageHint": "If you can no longer make it, use the button below to cancel or reschedule at any time.",
+  "email.bookingConfirmed.client.manageHint": "If you can no longer make it, you can cancel or reschedule at any time below.",
 
   "email.bookingConfirmed.coach.subject": "New booking – {{title}}",
   "email.bookingConfirmed.coach.preview": "{{clientName}} booked a session with you",
@@ -28,7 +30,7 @@
   "email.bookingCancelled.client.preview": "Your booking has been cancelled",
   "email.bookingCancelled.client.heading": "Your booking has been cancelled",
   "email.bookingCancelled.client.introByClient": "This confirms that you cancelled the appointment below.",
-  "email.bookingCancelled.client.introByCoach": "Unfortunately the coach had to cancel the appointment below.",
+  "email.bookingCancelled.client.introByCoach": "Unfortunately, {{coachName}} had to cancel the appointment below.",
   "email.bookingCancelled.client.reasonLabel": "Reason",
   "email.bookingCancelled.client.rebookHint": "You can book a new time on our site whenever you're ready.",
 
@@ -43,10 +45,25 @@
   "email.bookingRescheduled.client.preview": "Your booking moved to a new time",
   "email.bookingRescheduled.client.heading": "Your booking moved to a new time",
   "email.bookingRescheduled.client.intro": "You rescheduled your booking to the new time below.",
-  "email.bookingRescheduled.client.manageHint": "If this time doesn't work either, use the button below to change or cancel it.",
+  "email.bookingRescheduled.client.manageHint": "If this time doesn't work either, you can change or cancel it below.",
 
   "email.bookingRescheduled.coach.subject": "Rescheduled – {{title}}",
   "email.bookingRescheduled.coach.preview": "{{clientName}} rescheduled their booking",
   "email.bookingRescheduled.coach.heading": "A booking was rescheduled",
-  "email.bookingRescheduled.coach.intro": "{{clientName}} rescheduled their booking."
+  "email.bookingRescheduled.coach.intro": "{{clientName}} rescheduled their booking.",
+
+  "errors.bookingNoticeWindow": "This booking can only be changed or cancelled at least {{hours}} hours before the appointment.",
+  "errors.bookingNotFound": "Booking not found.",
+  "errors.eventTypeNotFound": "Event type not found.",
+  "errors.locationNotOffered": "This event type does not offer the selected location.",
+  "errors.invalidStartAt": "Invalid start time.",
+  "errors.pastStartAt": "Cannot book a time in the past.",
+  "errors.meetLinkCreateFailed": "Could not create the Google Meet link, please try again.",
+  "errors.meetLinkRegenerateFailed": "The booking time was updated, but the Google Meet link could not be regenerated. Please contact us so we can send the new link.",
+  "errors.bookingNotActive": "This booking is not active.",
+  "errors.spanMultipleDays": "Booking may not span multiple calendar days.",
+  "errors.outsideAvailability": "Selected time is outside the coach's availability.",
+  "errors.slotJustBooked": "Selected time was just booked – please pick another slot.",
+  "errors.invalidDateRange": "Invalid date range.",
+  "errors.rangeTooLong": "Range may not exceed {{days}} days."
 }
