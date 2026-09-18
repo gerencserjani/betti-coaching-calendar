@@ -59,6 +59,56 @@ schemas in the spec are generic (`type: object`) rather than fully typed.
 Request bodies, query params, enums, and auth requirements are fully accurate
 though — enough for a frontend/agent to know what to send and where.
 
+## Testing
+
+```bash
+docker compose up -d                                  # Postgres must be running
+createdb -h localhost -U betti betti_coaching_calendar_test  # once, if it doesn't exist yet
+npm run test:db:setup                                  # applies migrations to the test DB
+npm test                                                # unit + integration
+npm run test:e2e                                        # full app, boots a real Nest instance
+npm run test:cov                                         # unit + integration, with coverage
+```
+
+Tests run against a **dedicated Postgres database**
+(`betti_coaching_calendar_test`), never the dev/production one — every test
+file loads `.env.test` (dummy credentials, safe to commit) before anything
+else, via `src/test/setup.ts`. `src/test/factories.ts` and
+`src/test/prisma-test.util.ts` hold shared fixtures (`createTestCoach`,
+`createTestEventType`, …) and a `resetDatabase()` helper that every
+integration spec calls in `beforeEach`.
+
+- **Unit tests** (`*.spec.ts` next to the file they cover, no DB) — pure
+  functions and classes with their dependencies stubbed: crypto helpers, the
+  i18n service, .ics/Google Calendar link builders, email content building,
+  JWT signing.
+- **Integration tests** (`*.spec.ts`, real DB) — services instantiated
+  directly (`new BookingsService(testPrisma, ...)`) against the real test
+  database, with only genuinely external dependencies (Google Calendar API,
+  Gmail SMTP) mocked. `BookingsService`'s suite includes a real concurrency
+  test — two `create()` calls racing for the same slot via `Promise.allSettled`
+  — asserting the `SERIALIZABLE` transaction in
+  `common/serializable-transaction.util.ts` lets exactly one win.
+  `NotificationJobsService`'s suite runs against a **real pg-boss** instance
+  on the test database (not a mock) with only `NotificationsService` stubbed,
+  polling for a job to actually be picked up and processed, including a retry
+  after a simulated transient failure.
+- **e2e tests** (`test/*.e2e-spec.ts`) — the real `AppModule` booted with
+  `@nestjs/testing`, driven over HTTP via `supertest`. Only `EmailService` is
+  swapped for a stub (no real SMTP calls); everything else, including auth,
+  guards, validation pipes, and the Prisma exception filter, runs exactly as
+  in production. `@nestjs/throttler` is swapped for a trivial stub here too —
+  not because rate limiting needs mocking, but because the real package (CJS)
+  synchronously `require()`s `@nestjs/common` (ESM), which trips a Node.js
+  restriction on circular `require(esm)` the moment the app boots under
+  Jest's `--experimental-vm-modules` runtime. It's a Jest/Node ESM
+  interoperability limitation, not anything specific to this app's code —
+  see the comment in `test/jest-e2e.config.cjs` for the full story.
+
+Both Jest configs set `maxWorkers: 1`: integration and e2e specs share one
+real database and reset it per-test, so parallel workers would race and wipe
+each other's fixtures mid-test.
+
 ## Environment variables
 
 See `.env.example` for the full list. Notes on the less obvious ones:
