@@ -1,3 +1,18 @@
+# [1.7.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.6.3...v1.7.0) (2026-09-18)
+
+### Bug Fixes
+
+- also show the calendar-update reminder to the coach ([cd5c39b](https://github.com/gerencserjani/betti-coaching-calendar/commit/cd5c39b72a61978f962ee83b7cee5a15ae5bf0a7))
+- exclude slots inside the notice window from availability ([da2af67](https://github.com/gerencserjani/betti-coaching-calendar/commit/da2af6729075e10831288b1cf3d34b57075edf34))
+- localize every client-facing booking/slots error message ([6116169](https://github.com/gerencserjani/betti-coaching-calendar/commit/61161694b23263784505828ef609bfab6c54f83a))
+- localize the notice-window rejection message ([be79c34](https://github.com/gerencserjani/betti-coaching-calendar/commit/be79c349bed2231b470fe962bf4b042eb69ca104))
+- name the coach in the client's coach-cancelled email ([afbc8b1](https://github.com/gerencserjani/betti-coaching-calendar/commit/afbc8b13338fa6559c93022b77e3d594601d54cf))
+
+### Features
+
+- remind client to update calendar entry on reschedule ([a5a2b7e](https://github.com/gerencserjani/betti-coaching-calendar/commit/a5a2b7ebe752bdb51fff1350516e158dbe356aa3))
+- replace manage-booking button with cancel/reschedule links, add job logging ([a0079b0](https://github.com/gerencserjani/betti-coaching-calendar/commit/a0079b068a9c688c70a77aa45ffa125dfdcc6c0e))
+
 ## [1.6.3](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.6.2...v1.6.3) (2026-09-18)
 
 ### Bug Fixes
