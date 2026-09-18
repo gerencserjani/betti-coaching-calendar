@@ -1,3 +1,9 @@
+## [1.6.2](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.6.1...v1.6.2) (2026-09-18)
+
+### Bug Fixes
+
+- use a phone label, not the business address, in the calendar link for PHONE bookings ([3811ce9](https://github.com/gerencserjani/betti-coaching-calendar/commit/3811ce94b4d28680be311370825c4de83b44c47e))
+
 ## [1.6.1](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.6.0...v1.6.1) (2026-09-18)
 
 ### Bug Fixes

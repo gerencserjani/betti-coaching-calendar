@@ -1,6 +1,6 @@
 {
   "name": "betti-coaching-calendar",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Booking/calendar backend API for the betti-coaching website.",
   "author": "",
   "private": true,
