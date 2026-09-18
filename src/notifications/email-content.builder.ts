@@ -64,6 +64,7 @@ export class EmailContentBuilder {
             byClient
               ? 'email.bookingCancelled.client.introByClient'
               : 'email.bookingCancelled.client.introByCoach',
+            { coachName: ctx.coachName },
           ),
           detailsHeading: t('email.common.detailsHeading'),
           details,

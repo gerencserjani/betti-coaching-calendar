@@ -141,6 +141,17 @@ describe('EmailContentBuilder', () => {
       );
       expect(byClient.props.intro).not.toBe(byCoach.props.intro);
     });
+
+    it('names the coach instead of the generic "the coach" when they cancel', () => {
+      const { props } = builder.buildCancelled(
+        baseContext({ cancelledBy: CancelledBy.COACH }),
+        'client',
+        'hu',
+      );
+      expect(props.intro).toBe(
+        'Sajnálattal értesítünk, hogy Gerencsér Bernadett lemondta az alábbi időpontodat.',
+      );
+    });
   });
 
   describe('buildRescheduled', () => {

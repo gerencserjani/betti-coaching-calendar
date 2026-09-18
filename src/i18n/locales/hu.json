@@ -30,7 +30,7 @@
   "email.bookingCancelled.client.preview": "A foglalásod lemondásra került",
   "email.bookingCancelled.client.heading": "A foglalásod lemondásra került",
   "email.bookingCancelled.client.introByClient": "Megerősítjük, hogy lemondtad az alábbi időpontot.",
-  "email.bookingCancelled.client.introByCoach": "Sajnálattal értesítünk, hogy a coach lemondta az alábbi időpontot.",
+  "email.bookingCancelled.client.introByCoach": "Sajnálattal értesítünk, hogy {{coachName}} lemondta az alábbi időpontodat.",
   "email.bookingCancelled.client.reasonLabel": "Indoklás",
   "email.bookingCancelled.client.rebookHint": "Új időpontot bármikor foglalhatsz az oldalunkon.",
 
