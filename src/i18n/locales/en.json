@@ -13,6 +13,7 @@
   "email.common.buttonAddToGoogleCalendar": "Add to Google Calendar",
   "email.common.linkCancelBooking": "Cancel",
   "email.common.linkRescheduleBooking": "Change time",
+  "email.common.calendarUpdateHint": "If you already added the previous time to your calendar, please delete it and add the new one using the button above.",
 
   "email.bookingConfirmed.client.subject": "Booking confirmed – {{title}}",
   "email.bookingConfirmed.client.preview": "Your booking is confirmed: {{title}}",
@@ -45,7 +46,6 @@
   "email.bookingRescheduled.client.heading": "Your booking moved to a new time",
   "email.bookingRescheduled.client.intro": "You rescheduled your booking to the new time below.",
   "email.bookingRescheduled.client.manageHint": "If this time doesn't work either, you can change or cancel it below.",
-  "email.bookingRescheduled.client.calendarUpdateHint": "If you already added the previous time to your calendar, please delete it and add the new one using the button above.",
 
   "email.bookingRescheduled.coach.subject": "Rescheduled – {{title}}",
   "email.bookingRescheduled.coach.preview": "{{clientName}} rescheduled their booking",

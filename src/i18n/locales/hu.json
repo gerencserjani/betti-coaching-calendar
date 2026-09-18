@@ -13,6 +13,7 @@
   "email.common.buttonAddToGoogleCalendar": "Hozzáadás a Google Naptárhoz",
   "email.common.linkCancelBooking": "Lemondás",
   "email.common.linkRescheduleBooking": "Időpont módosítása",
+  "email.common.calendarUpdateHint": "Ha a korábbi időpontot már hozzáadtad a naptáradhoz, kérjük töröld azt, és vedd fel helyette az újat a fenti gombbal.",
 
   "email.bookingConfirmed.client.subject": "Foglalásod visszaigazolva – {{title}}",
   "email.bookingConfirmed.client.preview": "Visszaigazoltuk az időpontodat: {{title}}",
@@ -45,7 +46,6 @@
   "email.bookingRescheduled.client.heading": "A foglalásod új időpontra került",
   "email.bookingRescheduled.client.intro": "Az alábbi új időpontra módosítottad a foglalásodat.",
   "email.bookingRescheduled.client.manageHint": "Ha ez az időpont mégsem jó, lent bármikor módosíthatod vagy lemondhatod.",
-  "email.bookingRescheduled.client.calendarUpdateHint": "Ha a korábbi időpontot már hozzáadtad a naptáradhoz, kérjük töröld azt, és vedd fel helyette az újat a fenti gombbal.",
 
   "email.bookingRescheduled.coach.subject": "Módosított időpont – {{title}}",
   "email.bookingRescheduled.coach.preview": "{{clientName}} új időpontra módosította a foglalását",

@@ -157,9 +157,11 @@ describe('EmailContentBuilder', () => {
       );
     });
 
-    it('omits the calendar note for the coach', () => {
+    it('also reminds the coach, since they get the same quick-add button', () => {
       const { props } = builder.buildRescheduled(baseContext(), 'coach', 'hu');
-      expect(props.calendarNote).toBeUndefined();
+      expect(props.calendarNote).toBe(
+        'Ha a korábbi időpontot már hozzáadtad a naptáradhoz, kérjük töröld azt, és vedd fel helyette az újat a fenti gombbal.',
+      );
     });
   });
 });

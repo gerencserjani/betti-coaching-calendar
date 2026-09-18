@@ -170,7 +170,7 @@ export class EmailContentBuilder {
             label: t('email.common.buttonAddToGoogleCalendar'),
             url: ctx.googleCalendarUrl,
           },
-          calendarNote: t('email.bookingRescheduled.client.calendarUpdateHint'),
+          calendarNote: t('email.common.calendarUpdateHint'),
           manageLinks: this.buildManageLinks(ctx, t),
           footer: t('email.common.footer'),
         },
@@ -195,6 +195,7 @@ export class EmailContentBuilder {
           label: t('email.common.buttonAddToGoogleCalendar'),
           url: ctx.googleCalendarUrl,
         },
+        calendarNote: t('email.common.calendarUpdateHint'),
         footer: t('email.common.footer'),
       },
     };
