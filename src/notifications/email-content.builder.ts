@@ -33,57 +33,7 @@ export class EmailContentBuilder {
     recipient: EmailRecipient,
     locale: string,
   ): { subject: string; props: BookingEmailProps } {
-    const t = (key: string, vars?: Record<string, string | number>) =>
-      this.i18n.t(key, locale, vars);
-    const details = this.buildDetails(ctx, locale);
-
-    if (recipient === 'client') {
-      return {
-        subject: t('email.bookingConfirmed.client.subject', {
-          title: ctx.eventTypeTitle,
-        }),
-        props: {
-          previewText: t('email.bookingConfirmed.client.preview', {
-            title: ctx.eventTypeTitle,
-          }),
-          heading: t('email.bookingConfirmed.client.heading'),
-          intro: t('email.bookingConfirmed.client.intro', {
-            name: ctx.clientName,
-          }),
-          detailsHeading: t('email.common.detailsHeading'),
-          details,
-          helperText: t('email.bookingConfirmed.client.manageHint'),
-          secondaryButton: {
-            label: t('email.common.buttonAddToGoogleCalendar'),
-            url: ctx.googleCalendarUrl,
-          },
-          manageLinks: this.buildManageLinks(ctx, t),
-          footer: t('email.common.footer'),
-        },
-      };
-    }
-
-    return {
-      subject: t('email.bookingConfirmed.coach.subject', {
-        title: ctx.eventTypeTitle,
-      }),
-      props: {
-        previewText: t('email.bookingConfirmed.coach.preview', {
-          clientName: ctx.clientName,
-        }),
-        heading: t('email.bookingConfirmed.coach.heading'),
-        intro: t('email.bookingConfirmed.coach.intro', {
-          clientName: ctx.clientName,
-        }),
-        detailsHeading: t('email.common.detailsHeading'),
-        details,
-        secondaryButton: {
-          label: t('email.common.buttonAddToGoogleCalendar'),
-          url: ctx.googleCalendarUrl,
-        },
-        footer: t('email.common.footer'),
-      },
-    };
+    return this.buildScheduledEmail(ctx, recipient, locale, 'bookingConfirmed');
   }
 
   buildCancelled(
@@ -150,27 +100,57 @@ export class EmailContentBuilder {
     recipient: EmailRecipient,
     locale: string,
   ): { subject: string; props: BookingEmailProps } {
+    return this.buildScheduledEmail(
+      ctx,
+      recipient,
+      locale,
+      'bookingRescheduled',
+    );
+  }
+
+  /**
+   * Shared by buildConfirmed/buildRescheduled -- both emails have the exact
+   * same shape (details card, calendar button, manage links) and differ
+   * only in which copy they pull from i18n and whether the "your calendar
+   * event won't update itself" note applies (new bookings have nothing to
+   * warn about yet; reschedules might already be on the client's calendar
+   * under the old time).
+   */
+  private buildScheduledEmail(
+    ctx: BookingEmailContext,
+    recipient: EmailRecipient,
+    locale: string,
+    kind: 'bookingConfirmed' | 'bookingRescheduled',
+  ): { subject: string; props: BookingEmailProps } {
     const t = (key: string, vars?: Record<string, string | number>) =>
       this.i18n.t(key, locale, vars);
     const details = this.buildDetails(ctx, locale);
+    const vars = {
+      title: ctx.eventTypeTitle,
+      name: ctx.clientName,
+      clientName: ctx.clientName,
+    };
+    const calendarButton = {
+      label: t('email.common.buttonAddToGoogleCalendar'),
+      url: ctx.googleCalendarUrl,
+    };
+    const calendarNote =
+      kind === 'bookingRescheduled'
+        ? t('email.common.calendarUpdateHint')
+        : undefined;
 
     if (recipient === 'client') {
       return {
-        subject: t('email.bookingRescheduled.client.subject', {
-          title: ctx.eventTypeTitle,
-        }),
+        subject: t(`email.${kind}.client.subject`, vars),
         props: {
-          previewText: t('email.bookingRescheduled.client.preview'),
-          heading: t('email.bookingRescheduled.client.heading'),
-          intro: t('email.bookingRescheduled.client.intro'),
+          previewText: t(`email.${kind}.client.preview`, vars),
+          heading: t(`email.${kind}.client.heading`),
+          intro: t(`email.${kind}.client.intro`, vars),
           detailsHeading: t('email.common.detailsHeading'),
           details,
-          helperText: t('email.bookingRescheduled.client.manageHint'),
-          secondaryButton: {
-            label: t('email.common.buttonAddToGoogleCalendar'),
-            url: ctx.googleCalendarUrl,
-          },
-          calendarNote: t('email.common.calendarUpdateHint'),
+          helperText: t(`email.${kind}.client.manageHint`),
+          secondaryButton: calendarButton,
+          calendarNote,
           manageLinks: this.buildManageLinks(ctx, t),
           footer: t('email.common.footer'),
         },
@@ -178,24 +158,15 @@ export class EmailContentBuilder {
     }
 
     return {
-      subject: t('email.bookingRescheduled.coach.subject', {
-        title: ctx.eventTypeTitle,
-      }),
+      subject: t(`email.${kind}.coach.subject`, vars),
       props: {
-        previewText: t('email.bookingRescheduled.coach.preview', {
-          clientName: ctx.clientName,
-        }),
-        heading: t('email.bookingRescheduled.coach.heading'),
-        intro: t('email.bookingRescheduled.coach.intro', {
-          clientName: ctx.clientName,
-        }),
+        previewText: t(`email.${kind}.coach.preview`, vars),
+        heading: t(`email.${kind}.coach.heading`),
+        intro: t(`email.${kind}.coach.intro`, vars),
         detailsHeading: t('email.common.detailsHeading'),
         details,
-        secondaryButton: {
-          label: t('email.common.buttonAddToGoogleCalendar'),
-          url: ctx.googleCalendarUrl,
-        },
-        calendarNote: t('email.common.calendarUpdateHint'),
+        secondaryButton: calendarButton,
+        calendarNote,
         footer: t('email.common.footer'),
       },
     };
