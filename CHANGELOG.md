@@ -1,3 +1,9 @@
+## [1.6.1](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.6.0...v1.6.1) (2026-09-18)
+
+### Bug Fixes
+
+- repair broken Mermaid sequence diagram in README ([5c44557](https://github.com/gerencserjani/betti-coaching-calendar/commit/5c445578f24d6dc56036bdaef87b0388f6c04b86))
+
 # [1.6.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.5.1...v1.6.0) (2026-09-18)
 
 ### Features
