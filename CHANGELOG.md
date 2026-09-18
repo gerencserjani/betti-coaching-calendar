@@ -1,3 +1,9 @@
+## [1.6.3](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.6.2...v1.6.3) (2026-09-18)
+
+### Bug Fixes
+
+- apply the same phone location fix to the .ics attachment ([a37a434](https://github.com/gerencserjani/betti-coaching-calendar/commit/a37a434da19fa0a3cdde6677987e2580fbe39bfb))
+
 ## [1.6.2](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.6.1...v1.6.2) (2026-09-18)
 
 ### Bug Fixes
