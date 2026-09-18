@@ -149,5 +149,17 @@ describe('EmailContentBuilder', () => {
       const dateTime = props.details.find((d) => d.label === 'Időpont');
       expect(dateTime?.value).toContain('2026');
     });
+
+    it('reminds the client to update their calendar since the quick-add link creates a fresh event', () => {
+      const { props } = builder.buildRescheduled(baseContext(), 'client', 'hu');
+      expect(props.calendarNote).toBe(
+        'Ha a korábbi időpontot már hozzáadtad a naptáradhoz, kérjük töröld azt, és vedd fel helyette az újat a fenti gombbal.',
+      );
+    });
+
+    it('omits the calendar note for the coach', () => {
+      const { props } = builder.buildRescheduled(baseContext(), 'coach', 'hu');
+      expect(props.calendarNote).toBeUndefined();
+    });
   });
 });

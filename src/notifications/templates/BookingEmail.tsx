@@ -47,6 +47,11 @@ export interface BookingEmailProps {
    * recipients never need to use. */
   manageLinks?: BookingEmailLink[];
   helperText?: string;
+  /** Small note rendered right under the buttons -- used on reschedule
+   * emails to remind the recipient that the calendar button above adds a
+   * fresh event rather than updating one they may have already added for
+   * the old time. */
+  calendarNote?: string;
   footer: string;
 }
 
@@ -61,6 +66,7 @@ export function BookingEmail({
   secondaryButton,
   manageLinks,
   helperText,
+  calendarNote,
   footer,
 }: BookingEmailProps) {
   return (
@@ -134,6 +140,12 @@ export function BookingEmail({
                   </Button>
                 )}
               </Section>
+            )}
+
+            {calendarNote && (
+              <Text style={styles.calendarNote} className="bcc-manage-links">
+                {calendarNote}
+              </Text>
             )}
 
             {manageLinks && manageLinks.length > 0 && (
@@ -317,6 +329,13 @@ const styles = {
     textDecoration: 'none',
     margin: '0 8px',
     display: 'inline-block',
+  },
+  calendarNote: {
+    textAlign: 'center' as const,
+    marginTop: '10px',
+    fontSize: '13px',
+    color: light.inkSoft,
+    lineHeight: '18px',
   },
   manageLinksRow: {
     textAlign: 'center' as const,
