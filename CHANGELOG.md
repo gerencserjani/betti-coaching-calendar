@@ -1,3 +1,9 @@
+# [1.6.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.5.1...v1.6.0) (2026-09-18)
+
+### Features
+
+- durable, retrying booking-notification queue via pg-boss ([6cbc0f6](https://github.com/gerencserjani/betti-coaching-calendar/commit/6cbc0f6d47e722903de33b3e0240f2b40e02181e))
+
 ## [1.5.1](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.5.0...v1.5.1) (2026-09-17)
 
 ### Bug Fixes
