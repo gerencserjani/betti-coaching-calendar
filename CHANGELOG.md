@@ -1,3 +1,9 @@
+## [1.7.1](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.7.0...v1.7.1) (2026-09-18)
+
+### Bug Fixes
+
+- request the userinfo.email scope in the Google Calendar OAuth flow ([d7c79d4](https://github.com/gerencserjani/betti-coaching-calendar/commit/d7c79d4e1dc517633920b992e00160ab57d957dc))
+
 # [1.7.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.6.3...v1.7.0) (2026-09-18)
 
 ### Bug Fixes
