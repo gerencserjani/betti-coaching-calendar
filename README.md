@@ -319,6 +319,22 @@ is either a Cloud Scheduler-triggered `/internal/process-jobs` endpoint, or
 both are drop-in replacements for `NotificationJobsService`, not a rewrite of
 `BookingsService`.
 
+**Inspecting the queue.** [`@pg-boss/dashboard`](https://www.npmjs.com/package/@pg-boss/dashboard)
+is a separate, standalone web UI for browsing queues/jobs/retries - it isn't
+wired into the app itself, just run on demand:
+
+```bash
+npm run jobs:dashboard        # local dev DB, http://localhost:3010
+npm run jobs:dashboard:prod   # production (Neon) DB, same URL, read-only
+```
+
+Only one at a time makes sense to look at, so switching is just stopping one
+and starting the other. Port 3010 is deliberate - it avoids clashing with the
+app's own dev server on 3000. The `:prod` variant sets
+`PGBOSS_DASHBOARD_READ_ONLY=1` so it can't accidentally delete/retry a real
+job; drop that env var locally if you actually need to manage a stuck
+production job through the UI.
+
 ## Production hosting (Neon + Cloud Run)
 
 The app is deployed as a container (`Dockerfile` at the repo root) to
