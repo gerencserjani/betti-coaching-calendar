@@ -50,5 +50,7 @@
   "email.bookingRescheduled.coach.subject": "Rescheduled – {{title}}",
   "email.bookingRescheduled.coach.preview": "{{clientName}} rescheduled their booking",
   "email.bookingRescheduled.coach.heading": "A booking was rescheduled",
-  "email.bookingRescheduled.coach.intro": "{{clientName}} rescheduled their booking."
+  "email.bookingRescheduled.coach.intro": "{{clientName}} rescheduled their booking.",
+
+  "errors.bookingNoticeWindow": "This booking can only be changed or cancelled at least {{hours}} hours before the appointment."
 }

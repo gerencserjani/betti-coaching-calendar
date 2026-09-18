@@ -18,6 +18,7 @@ import {
   type Coach,
 } from '@prisma/client';
 import { GoogleCalendarService } from '../google/google-calendar.service.js';
+import { I18nService } from '../i18n/i18n.service.js';
 import { NotificationJobsService } from '../jobs/notification-jobs.service.js';
 import type { BookingWithRelations } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -44,6 +45,7 @@ export class BookingsService {
     private readonly settingsService: SettingsService,
     private readonly googleCalendarService: GoogleCalendarService,
     private readonly notificationJobsService: NotificationJobsService,
+    private readonly i18n: I18nService,
   ) {}
 
   async findAll(): Promise<BookingWithRelations[]> {
@@ -133,7 +135,7 @@ export class BookingsService {
   ): Promise<BookingWithRelations> {
     const booking = await this.findByManageToken(token);
     this.assertConfirmed(booking);
-    await this.assertWithinNoticeWindow(booking.startAt);
+    await this.assertWithinNoticeWindow(booking.startAt, booking.locale);
 
     const updated = await this.applyCancellation(
       booking,
@@ -171,7 +173,7 @@ export class BookingsService {
   ): Promise<BookingWithRelations> {
     const booking = await this.findByManageToken(token);
     this.assertConfirmed(booking);
-    await this.assertWithinNoticeWindow(booking.startAt);
+    await this.assertWithinNoticeWindow(booking.startAt, booking.locale);
 
     const settings = await this.settingsService.get();
     const timezone = settings.businessTimezone;
@@ -302,14 +304,19 @@ export class BookingsService {
     }
   }
 
-  private async assertWithinNoticeWindow(startAt: Date): Promise<void> {
+  private async assertWithinNoticeWindow(
+    startAt: Date,
+    locale: string,
+  ): Promise<void> {
     const settings = await this.settingsService.get();
     const cutoff = DateTime.now().plus({
       hours: settings.cancellationNoticeHours,
     });
     if (DateTime.fromJSDate(startAt) < cutoff) {
       throw new BadRequestException(
-        `This booking can only be changed at least ${settings.cancellationNoticeHours} hours in advance`,
+        this.i18n.t('errors.bookingNoticeWindow', locale, {
+          hours: settings.cancellationNoticeHours,
+        }),
       );
     }
   }

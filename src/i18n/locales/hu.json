@@ -50,5 +50,7 @@
   "email.bookingRescheduled.coach.subject": "Módosított időpont – {{title}}",
   "email.bookingRescheduled.coach.preview": "{{clientName}} új időpontra módosította a foglalását",
   "email.bookingRescheduled.coach.heading": "Egy foglalás új időpontra módosult",
-  "email.bookingRescheduled.coach.intro": "{{clientName}} új időpontra módosította a foglalását."
+  "email.bookingRescheduled.coach.intro": "{{clientName}} új időpontra módosította a foglalását.",
+
+  "errors.bookingNoticeWindow": "Ez a foglalás már csak legalább {{hours}} órával az időpont előtt módosítható vagy mondható le."
 }

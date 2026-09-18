@@ -16,6 +16,7 @@ import type {
   GoogleCalendarService,
   MeetEventResult,
 } from '../google/google-calendar.service.js';
+import { I18nService } from '../i18n/i18n.service.js';
 import type { NotificationJobsService } from '../jobs/notification-jobs.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
@@ -53,6 +54,7 @@ describe('BookingsService (integration)', () => {
   const prisma = testPrisma as unknown as PrismaService;
   const availabilityService = new AvailabilityService(prisma);
   const settingsService = new SettingsService(prisma);
+  const i18nService = new I18nService();
 
   let googleCalendarService: jest.Mocked<GoogleCalendarService>;
   let notificationJobsService: jest.Mocked<NotificationJobsService>;
@@ -61,6 +63,10 @@ describe('BookingsService (integration)', () => {
   let eventType: EventType;
 
   const FUTURE_DAY = '2026-10-01'; // Thursday, well within CEST (before Oct 25 DST switch)
+
+  beforeAll(async () => {
+    await i18nService.onModuleInit();
+  });
 
   beforeEach(async () => {
     await resetDatabase();
@@ -79,6 +85,7 @@ describe('BookingsService (integration)', () => {
       settingsService,
       googleCalendarService,
       notificationJobsService,
+      i18nService,
     );
   });
 
@@ -267,13 +274,15 @@ describe('BookingsService (integration)', () => {
       );
     });
 
-    it('rejects cancelling within the notice window', async () => {
+    it('rejects cancelling within the notice window, with a Hungarian message for the booking default locale', async () => {
       const soon = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now (< 48h default)
       const booking = await createConfirmedBooking(soon);
 
       await expect(
         service.cancelByClient(booking.manageToken, {}),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(
+        'Ez a foglalás már csak legalább 48 órával az időpont előtt módosítható vagy mondható le.',
+      );
     });
 
     it('rejects cancelling an already-cancelled booking', async () => {
