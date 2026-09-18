@@ -1,3 +1,9 @@
+## [1.7.3](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.7.2...v1.7.3) (2026-09-18)
+
+### Bug Fixes
+
+- enable Nest shutdown hooks so pg-boss actually drains gracefully ([9e625b7](https://github.com/gerencserjani/betti-coaching-calendar/commit/9e625b79ef3d16cf5874eadb861b9cdc0c4792b0))
+
 ## [1.7.2](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.7.1...v1.7.2) (2026-09-18)
 
 ### Bug Fixes
