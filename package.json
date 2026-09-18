@@ -45,6 +45,7 @@
     "luxon": "^3.7.2",
     "nanoid": "^6.0.1",
     "nodemailer": "^10.0.10",
+    "pg-boss": "^12.33.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "reflect-metadata": "^0.2.2",

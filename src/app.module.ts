@@ -14,6 +14,7 @@ import { validateEnv } from './config/env.validation.js';
 import { EventTypesModule } from './event-types/event-types.module.js';
 import { GoogleModule } from './google/google.module.js';
 import { I18nModule } from './i18n/i18n.module.js';
+import { JobsModule } from './jobs/jobs.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { SettingsModule } from './settings/settings.module.js';
@@ -41,6 +42,7 @@ import { SlotsModule } from './slots/slots.module.js';
     SlotsModule,
     GoogleModule,
     NotificationsModule,
+    JobsModule,
     BookingsModule,
   ],
   controllers: [AppController],

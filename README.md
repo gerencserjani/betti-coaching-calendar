@@ -7,6 +7,30 @@ weekly availability, clients book without an account, and the whole thing is
 modeled loosely on [cal.diy](https://github.com/calcom/cal.diy) (Cal.com's
 open-source, MIT-licensed community fork) — much simplified for one frontend.
 
+## System design
+
+```mermaid
+graph TB
+    Client["Browser / frontend<br/>(Vercel)"]
+    API["NestJS API<br/>Google Cloud Run — scale-to-zero"]
+    DB[("Postgres<br/>Neon — scale-to-zero, direct connection")]
+    Gmail["Gmail SMTP<br/>(App Password)"]
+    GCal["Google Calendar API<br/>(one shared OAuth account)"]
+
+    Client -- "HTTPS, bearer JWT for coach/admin routes" --> API
+    API -- "Prisma" --> DB
+    API -- "pg-boss job queue<br/>(own schema, same DB)" --> DB
+    API -- "nodemailer" --> Gmail
+    API -- "mints a fresh Meet link per booking" --> GCal
+```
+
+Every piece here is chosen to stay inside a generous free tier at this app's
+traffic level, not because it's the "correct" way to build a booking system at
+scale — see each section below for the specific trade-off accepted and why.
+Nothing here needs Redis, a message broker, or an always-on server: the two
+serverless pieces (Cloud Run, Neon) both bill for active compute time only,
+and both scale to zero between real requests.
+
 ## Development
 
 ```bash
@@ -155,17 +179,95 @@ reasoning in the conversation history if you need the "why".
   bilingual (hu/en) via a small i18next-based service reading flat-key JSON
   files from `src/i18n/locales/`, mirroring the frontend's own i18next setup.
   Every confirmation/reschedule email carries a `.ics` attachment (works in
-  Apple/Outlook/Google) plus a Google Calendar "quick add" link. Email
-  sending is best-effort and asynchronous — a failed send is logged but never
-  fails the booking API call itself. The email HTML mirrors the frontend's
-  brand (colors/fonts from `betti-coaching/src/index.css`'s custom
-  properties, both light and dark-mode variants) — see the comment above the
-  `light`/`dark` palette constants in `BookingEmail.tsx` if that palette
-  changes and the email needs updating to match.
+  Apple/Outlook/Google) plus a Google Calendar "quick add" link. Sending is
+  queued and retried, not fire-and-forget — see "Background jobs" below. The
+  email HTML mirrors the frontend's brand (colors/fonts from
+  `betti-coaching/src/index.css`'s custom properties, both light and
+  dark-mode variants) — see the comment above the `light`/`dark` palette
+  constants in `BookingEmail.tsx` if that palette changes and the email needs
+  updating to match.
 - **Cancellation/reschedule**: only the client can reschedule (self-service);
   a coach can only cancel, with a mandatory reason. Both are blocked within
   `Settings.cancellationNoticeHours` (default 48h) of the appointment for
   client-initiated changes; coaches aren't bound by that window.
+
+## Background jobs
+
+Booking confirmation/cancellation/reschedule emails go through a durable
+queue (`src/jobs/`), not a fire-and-forget async call. Why, and why it looks
+the way it does, is worth documenting because the "obvious" answer
+(Redis + BullMQ, or a cron-triggered worker) was deliberately rejected.
+
+**Why a queue at all.** The old code sent email inline and swallowed failures
+with `.catch(logger.error)`. If Gmail SMTP hiccuped, or the process got torn
+down mid-send (which happens routinely on Cloud Run's scale-to-zero), the
+email was just gone - nothing durable recorded the attempt.
+
+**Why `pg-boss` and not Redis/BullMQ.** A queue is a table with a good
+locking strategy (`FOR UPDATE SKIP LOCKED`) more than it's a new category of
+infrastructure. [`pg-boss`](https://github.com/timgit/pg-boss) implements
+that on top of the Postgres we already have - no new service to provision,
+pay for, or keep patched. It also means enqueueing can never silently lose a
+job the way a separate Redis call could: worst case, Postgres itself is down,
+in which case nothing else in the app works either.
+
+**Why there's no scheduler/cron driving it.** This was the actual design
+question, worked through at length in this project's history - short
+version:
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as NestJS (Cloud Run instance)
+    participant PG as Postgres (Neon)
+    participant Gmail as Gmail SMTP
+
+    C->>API: POST /bookings
+    API->>PG: create booking (SERIALIZABLE tx)
+    API->>PG: pg-boss.send() - enqueue notification job
+    API-->>C: 201 Created
+    Note over API,PG: response already sent;<br/>everything below is in-process background work
+
+    API->>PG: pg-boss supervisor claims the job (SKIP LOCKED)
+    API->>Gmail: send confirmation email
+    alt send succeeds
+        Gmail-->>API: 250 OK
+        API->>PG: mark job completed
+    else send fails
+        Gmail-->>API: error
+        API->>PG: mark pending again, ~5s/10s/20s backoff
+        Note over API: if this Cloud Run instance goes idle before<br/>a retry is due, the job just waits in Postgres -<br/>the next real request's instance resumes it
+    end
+```
+
+A dedicated scheduler (Google Cloud Scheduler, or Neon's own Function
+Triggers) was considered and dropped, for two reasons:
+
+1. **It doesn't remove the real constraint.** Whoever calls the queue still
+   has to query Postgres to do it, and that query is what keeps Neon's
+   compute from auto-suspending. A scheduler polling every minute would burn
+   through Neon's 100 CU-hour/month free allowance in days (continuous
+   compute ≈ 720 hours/month vs. the 100-hour budget) - the trigger source
+   doesn't change that math, only who initiates the same expensive query.
+2. **`pg-boss`'s own retry policy doesn't need one.** `retryLimit: 3,
+retryDelay: 5, retryBackoff: true` (see `notification-jobs.service.ts`)
+   means a failed send is automatically retried a few times with growing
+   backoff, for as long as the process instance that enqueued it happens to
+   stay alive - which, immediately after a real request, it usually does for
+   at least a little while. If it doesn't finish before the instance goes
+   idle, the job's state is safely persisted in Postgres and resumes on the
+   next real request, rather than being lost.
+
+The accepted trade-off: **a failed send's retry timing isn't guaranteed** -
+in the worst case (no traffic at all for a while) a retry waits for the next
+real visitor. For a low-traffic booking site, and given the first attempt is
+still synchronous/immediate on the happy path, this was judged an acceptable
+cost for avoiding a second piece of paid/managed infrastructure. If traffic
+or reliability requirements ever grow past this, the documented upgrade path
+is either a Cloud Scheduler-triggered `/internal/process-jobs` endpoint, or
+(if `pg-boss` itself becomes the bottleneck) a proper Redis-backed queue -
+both are drop-in replacements for `NotificationJobsService`, not a rewrite of
+`BookingsService`.
 
 ## Production hosting (Neon + Cloud Run)
 

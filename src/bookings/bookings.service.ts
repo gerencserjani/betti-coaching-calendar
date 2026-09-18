@@ -18,10 +18,8 @@ import {
   type Coach,
 } from '@prisma/client';
 import { GoogleCalendarService } from '../google/google-calendar.service.js';
-import {
-  NotificationsService,
-  type BookingWithRelations,
-} from '../notifications/notifications.service.js';
+import { NotificationJobsService } from '../jobs/notification-jobs.service.js';
+import type { BookingWithRelations } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { runSerializable } from '../common/serializable-transaction.util.js';
 import { assertCoachOwnsOrIsAdmin } from '../common/ownership.util.js';
@@ -45,7 +43,7 @@ export class BookingsService {
     private readonly availabilityService: AvailabilityService,
     private readonly settingsService: SettingsService,
     private readonly googleCalendarService: GoogleCalendarService,
-    private readonly notificationsService: NotificationsService,
+    private readonly notificationJobsService: NotificationJobsService,
   ) {}
 
   async findAll(): Promise<BookingWithRelations[]> {
@@ -124,11 +122,7 @@ export class BookingsService {
       booking = await this.attachFreshMeetLink(booking);
     }
 
-    this.notificationsService
-      .notifyBookingConfirmed(booking)
-      .catch((error: unknown) =>
-        this.logger.error('Failed to send booking-confirmed emails', error),
-      );
+    await this.notificationJobsService.enqueue(booking.id, 'confirmed');
 
     return booking;
   }
@@ -146,11 +140,7 @@ export class BookingsService {
       CancelledBy.CLIENT,
       dto.reason,
     );
-    this.notificationsService
-      .notifyBookingCancelled(updated)
-      .catch((error: unknown) =>
-        this.logger.error('Failed to send cancellation emails', error),
-      );
+    await this.notificationJobsService.enqueue(updated.id, 'cancelled');
     return updated;
   }
 
@@ -171,11 +161,7 @@ export class BookingsService {
       CancelledBy.COACH,
       dto.reason,
     );
-    this.notificationsService
-      .notifyBookingCancelled(updated)
-      .catch((error: unknown) =>
-        this.logger.error('Failed to send cancellation emails', error),
-      );
+    await this.notificationJobsService.enqueue(updated.id, 'cancelled');
     return updated;
   }
 
@@ -241,11 +227,7 @@ export class BookingsService {
       });
     }
 
-    this.notificationsService
-      .notifyBookingRescheduled(updated)
-      .catch((error: unknown) =>
-        this.logger.error('Failed to send reschedule emails', error),
-      );
+    await this.notificationJobsService.enqueue(updated.id, 'rescheduled');
 
     return updated;
   }
