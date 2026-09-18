@@ -29,6 +29,12 @@ async function bootstrap() {
   // frontend agent can fetch /docs-json directly instead of reading source.
   SwaggerModule.setup('docs', app, buildOpenApiDocument(app));
 
+  // Without this, OnModuleDestroy hooks (e.g. PgBossService's graceful
+  // boss.stop()) never run - Nest only wires SIGTERM/SIGINT to app.close()
+  // when shutdown hooks are explicitly enabled. Cloud Run sends SIGTERM on
+  // every scale-down/redeploy, so this matters in practice, not just in theory.
+  app.enableShutdownHooks();
+
   await app.listen(port);
 }
 await bootstrap();
