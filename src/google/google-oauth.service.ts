@@ -12,7 +12,15 @@ import type { AppConfig } from '../config/configuration.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const GOOGLE_INTEGRATION_ID = 'singleton';
-const CALENDAR_SCOPES = ['https://www.googleapis.com/auth/calendar.events'];
+// calendar.events for Meet-link creation, userinfo.email so the
+// oauth2.userinfo.get() call below (used to record connectedEmail) is
+// actually authorized -- without it, that call 401s even though the token
+// exchange itself succeeds, since the granted token only carries whatever
+// scopes were requested here.
+const CALENDAR_SCOPES = [
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/userinfo.email',
+];
 
 @Injectable()
 export class GoogleOAuthService {
