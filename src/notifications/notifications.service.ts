@@ -120,15 +120,32 @@ export class NotificationsService {
       googleCalendarUrl: buildGoogleCalendarQuickAddUrl({
         title: booking.eventType.title,
         description: booking.clientNote ?? undefined,
-        location:
-          booking.location === LocationType.GOOGLE_MEET
-            ? (booking.meetLink ?? '')
-            : settings.businessAddress,
+        location: this.quickAddLocation(booking, settings.businessAddress),
         startAt: booking.startAt,
         endAt: booking.endAt,
       }),
       cancelledBy: booking.cancelledBy as CancelledBy | undefined,
       cancellationReason: booking.cancellationReason ?? undefined,
     };
+  }
+
+  /**
+   * Google's calendar/render quick-add URL takes an arbitrary free-text
+   * `location` (no format restriction), so a PHONE booking gets its own
+   * plain label instead of falling back to the business's physical address,
+   * which would be misleading for a call.
+   */
+  private quickAddLocation(
+    booking: BookingWithRelations,
+    businessAddress: string,
+  ): string {
+    switch (booking.location) {
+      case LocationType.GOOGLE_MEET:
+        return booking.meetLink ?? '';
+      case LocationType.PHONE:
+        return 'Telefon';
+      case LocationType.IN_PERSON:
+        return businessAddress;
+    }
   }
 }
