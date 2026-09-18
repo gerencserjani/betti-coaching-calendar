@@ -68,6 +68,9 @@ export class SlotsService {
       where: {
         coachId: eventType.coachId,
         status: BookingStatus.CONFIRMED,
+        id: query.excludeBookingId
+          ? { not: query.excludeBookingId }
+          : undefined,
         startAt: { gte: from.toJSDate() },
         endAt: { lte: to.plus({ days: 1 }).toJSDate() },
       },
