@@ -79,10 +79,7 @@ export class NotificationsService {
             uid: `${booking.id}@betti-coaching-calendar`,
             title: booking.eventType.title,
             description: booking.clientNote ?? undefined,
-            location:
-              ctx.location === LocationType.GOOGLE_MEET
-                ? (ctx.meetLink ?? '')
-                : ctx.businessAddress,
+            location: this.resolveLocationText(booking, ctx.businessAddress),
             startAt: booking.startAt,
             endAt: booking.endAt,
             organizer: { name: booking.coach.name, email: booking.coach.email },
@@ -120,7 +117,7 @@ export class NotificationsService {
       googleCalendarUrl: buildGoogleCalendarQuickAddUrl({
         title: booking.eventType.title,
         description: booking.clientNote ?? undefined,
-        location: this.quickAddLocation(booking, settings.businessAddress),
+        location: this.resolveLocationText(booking, settings.businessAddress),
         startAt: booking.startAt,
         endAt: booking.endAt,
       }),
@@ -130,12 +127,13 @@ export class NotificationsService {
   }
 
   /**
-   * Google's calendar/render quick-add URL takes an arbitrary free-text
-   * `location` (no format restriction), so a PHONE booking gets its own
-   * plain label instead of falling back to the business's physical address,
-   * which would be misleading for a call.
+   * Shared by the Google Calendar quick-add link and the .ics attachment -
+   * both take arbitrary free-text location fields (no format restriction),
+   * so a PHONE booking gets its own plain label in both instead of falling
+   * back to the business's physical address, which would be misleading for
+   * a call.
    */
-  private quickAddLocation(
+  private resolveLocationText(
     booking: BookingWithRelations,
     businessAddress: string,
   ): string {

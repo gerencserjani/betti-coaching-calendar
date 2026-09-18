@@ -92,40 +92,50 @@ describe('NotificationsService (integration)', () => {
     }) as unknown as Promise<BookingWithRelations>;
   }
 
-  function clientCalendarUrl(): string {
+  function clientEmailInput(): SendEmailInput {
     const clientCall = emailService.send.mock.calls.find(
       ([input]) => (input as SendEmailInput).to === 'client@example.com',
     );
-    const props = (clientCall?.[0] as SendEmailInput).props;
-    return props.secondaryButton!.url;
+    return clientCall?.[0] as SendEmailInput;
   }
 
-  it('uses the Google Meet link as the calendar location for a GOOGLE_MEET booking', async () => {
+  function clientCalendarUrlLocation(): string | null {
+    return new URL(
+      clientEmailInput().props.secondaryButton!.url,
+    ).searchParams.get('location');
+  }
+
+  function icsLocationLine(): string | undefined {
+    return clientEmailInput()
+      .icsContent?.split('\r\n')
+      .find((line) => line.startsWith('LOCATION:'));
+  }
+
+  it('uses the Google Meet link as the location, in both the calendar link and the .ics file, for a GOOGLE_MEET booking', async () => {
     const booking = await createBooking(LocationType.GOOGLE_MEET);
     await service.notifyBookingConfirmed(booking);
 
-    const url = new URL(clientCalendarUrl());
-    expect(url.searchParams.get('location')).toBe(
+    expect(clientCalendarUrlLocation()).toBe(
       'https://meet.google.com/abc-defg-hij',
+    );
+    expect(icsLocationLine()).toBe(
+      'LOCATION:https://meet.google.com/abc-defg-hij',
     );
   });
 
-  it('uses the business address as the calendar location for an IN_PERSON booking', async () => {
+  it('uses the business address as the location, in both the calendar link and the .ics file, for an IN_PERSON booking', async () => {
     const booking = await createBooking(LocationType.IN_PERSON);
     await service.notifyBookingConfirmed(booking);
 
-    const url = new URL(clientCalendarUrl());
-    expect(url.searchParams.get('location')).toBe('Budapest, Teszt utca 1.');
+    expect(clientCalendarUrlLocation()).toBe('Budapest, Teszt utca 1.');
+    expect(icsLocationLine()).toBe('LOCATION:Budapest\\, Teszt utca 1.');
   });
 
-  it('uses a phone label, not the business address, as the calendar location for a PHONE booking', async () => {
+  it('uses a phone label, not the business address, in both the calendar link and the .ics file, for a PHONE booking', async () => {
     const booking = await createBooking(LocationType.PHONE);
     await service.notifyBookingConfirmed(booking);
 
-    const url = new URL(clientCalendarUrl());
-    expect(url.searchParams.get('location')).toBe('Telefon');
-    expect(url.searchParams.get('location')).not.toBe(
-      'Budapest, Teszt utca 1.',
-    );
+    expect(clientCalendarUrlLocation()).toBe('Telefon');
+    expect(icsLocationLine()).toBe('LOCATION:Telefon');
   });
 });
