@@ -218,25 +218,25 @@ version:
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant API as NestJS (Cloud Run instance)
-    participant PG as Postgres (Neon)
+    participant API as NestJS on Cloud Run
+    participant PG as Postgres on Neon
     participant Gmail as Gmail SMTP
 
     C->>API: POST /bookings
-    API->>PG: create booking (SERIALIZABLE tx)
-    API->>PG: pg-boss.send() - enqueue notification job
+    API->>PG: create booking, SERIALIZABLE tx
+    API->>PG: pg-boss send - enqueue notification job
     API-->>C: 201 Created
-    Note over API,PG: response already sent;<br/>everything below is in-process background work
+    Note over API,PG: response already sent, everything below runs in the background
 
-    API->>PG: pg-boss supervisor claims the job (SKIP LOCKED)
+    API->>PG: pg-boss supervisor claims the job
     API->>Gmail: send confirmation email
     alt send succeeds
         Gmail-->>API: 250 OK
         API->>PG: mark job completed
     else send fails
         Gmail-->>API: error
-        API->>PG: mark pending again, ~5s/10s/20s backoff
-        Note over API: if this Cloud Run instance goes idle before<br/>a retry is due, the job just waits in Postgres -<br/>the next real request's instance resumes it
+        API->>PG: mark pending again with a backoff delay
+        Note over API: if this instance goes idle before the retry is due, the job waits in Postgres until the next real request resumes it
     end
 ```
 
