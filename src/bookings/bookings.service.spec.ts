@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { jest } from '@jest/globals';
 import {
@@ -132,14 +131,16 @@ describe('BookingsService (integration)', () => {
       expect(booking.googleEventId).toBe('fake-event-id');
     });
 
-    it('rolls back the booking if Google Meet creation fails', async () => {
+    it('rolls back the booking if Google Meet creation fails, with a message in the booking locale', async () => {
       googleCalendarService.createMeetEvent.mockRejectedValueOnce(
         new Error('Google API down'),
       );
 
       await expect(
         service.create(createDto({ location: LocationType.GOOGLE_MEET })),
-      ).rejects.toThrow(ServiceUnavailableException);
+      ).rejects.toThrow(
+        'Could not create the Google Meet link, please try again.',
+      );
 
       const bookings = await testPrisma.booking.findMany();
       expect(bookings).toHaveLength(0);

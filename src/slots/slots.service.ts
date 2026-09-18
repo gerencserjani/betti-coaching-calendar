@@ -6,6 +6,7 @@ import {
 import { DateTime } from 'luxon';
 import { AvailabilityService } from '../availability/availability.service.js';
 import { BookingStatus } from '@prisma/client';
+import { I18nService } from '../i18n/i18n.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import type { QuerySlotsDto } from './dto/query-slots.dto.js';
@@ -24,6 +25,7 @@ export class SlotsService {
     private readonly prisma: PrismaService,
     private readonly availabilityService: AvailabilityService,
     private readonly settingsService: SettingsService,
+    private readonly i18n: I18nService,
   ) {}
 
   async computeSlots(query: QuerySlotsDto): Promise<Slot[]> {
@@ -31,7 +33,9 @@ export class SlotsService {
       where: { id: query.eventTypeId },
     });
     if (!eventType || !eventType.isActive) {
-      throw new NotFoundException('Event type not found');
+      throw new NotFoundException(
+        this.i18n.t('errors.eventTypeNotFound', undefined),
+      );
     }
 
     const settings = await this.settingsService.get();
@@ -42,11 +46,15 @@ export class SlotsService {
     );
     const to = DateTime.fromISO(query.to, { zone: timezone }).startOf('day');
     if (!from.isValid || !to.isValid || to < from) {
-      throw new BadRequestException('Invalid date range');
+      throw new BadRequestException(
+        this.i18n.t('errors.invalidDateRange', undefined),
+      );
     }
     if (to.diff(from, 'days').days > MAX_RANGE_DAYS) {
       throw new BadRequestException(
-        `Range may not exceed ${MAX_RANGE_DAYS} days`,
+        this.i18n.t('errors.rangeTooLong', undefined, {
+          days: MAX_RANGE_DAYS,
+        }),
       );
     }
 

@@ -52,5 +52,18 @@
   "email.bookingRescheduled.coach.heading": "Egy foglalás új időpontra módosult",
   "email.bookingRescheduled.coach.intro": "{{clientName}} új időpontra módosította a foglalását.",
 
-  "errors.bookingNoticeWindow": "Ez a foglalás már csak legalább {{hours}} órával az időpont előtt módosítható vagy mondható le."
+  "errors.bookingNoticeWindow": "Ez a foglalás már csak legalább {{hours}} órával az időpont előtt módosítható vagy mondható le.",
+  "errors.bookingNotFound": "A foglalás nem található.",
+  "errors.eventTypeNotFound": "A szolgáltatás nem található.",
+  "errors.locationNotOffered": "Ez a szolgáltatás nem kínálja a kiválasztott helyszínt.",
+  "errors.invalidStartAt": "Érvénytelen időpont.",
+  "errors.pastStartAt": "Múltbeli időpont nem foglalható.",
+  "errors.meetLinkCreateFailed": "Nem sikerült létrehozni a Google Meet linket, kérjük próbáld újra.",
+  "errors.meetLinkRegenerateFailed": "Az időpont módosult, de a Google Meet linket nem sikerült újra létrehozni. Kérjük, vedd fel velünk a kapcsolatot, hogy elküldhessük az új linket.",
+  "errors.bookingNotActive": "Ez a foglalás már nem aktív.",
+  "errors.spanMultipleDays": "A foglalás nem nyúlhat át másik naptári napra.",
+  "errors.outsideAvailability": "A kiválasztott időpont kívül esik a coach elérhetőségén.",
+  "errors.slotJustBooked": "A kiválasztott időpontot közben lefoglalták – válassz másik időpontot.",
+  "errors.invalidDateRange": "Érvénytelen dátumtartomány.",
+  "errors.rangeTooLong": "A tartomány nem lehet hosszabb {{days}} napnál."
 }

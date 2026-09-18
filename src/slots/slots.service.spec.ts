@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { LocationType, type Coach, type EventType } from '@prisma/client';
 import { AvailabilityService } from '../availability/availability.service.js';
+import { I18nService } from '../i18n/i18n.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import {
@@ -20,14 +21,20 @@ describe('SlotsService (integration)', () => {
   const prisma = testPrisma as unknown as PrismaService;
   const availabilityService = new AvailabilityService(prisma);
   const settingsService = new SettingsService(prisma);
+  const i18nService = new I18nService();
   const service = new SlotsService(
     prisma,
     availabilityService,
     settingsService,
+    i18nService,
   );
 
   let coach: Coach;
   let eventType: EventType;
+
+  beforeAll(async () => {
+    await i18nService.onModuleInit();
+  });
 
   beforeEach(async () => {
     await resetDatabase();

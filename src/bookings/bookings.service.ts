@@ -61,7 +61,9 @@ export class BookingsService {
       include: BOOKING_INCLUDE,
     });
     if (!booking) {
-      throw new NotFoundException('Booking not found');
+      throw new NotFoundException(
+        this.i18n.t('errors.bookingNotFound', undefined),
+      );
     }
     return booking;
   }
@@ -72,11 +74,13 @@ export class BookingsService {
       include: { coach: true },
     });
     if (!eventType || !eventType.isActive) {
-      throw new NotFoundException('Event type not found');
+      throw new NotFoundException(
+        this.i18n.t('errors.eventTypeNotFound', dto.locale),
+      );
     }
     if (!eventType.locations.includes(dto.location)) {
       throw new BadRequestException(
-        'This event type does not offer the selected location',
+        this.i18n.t('errors.locationNotOffered', dto.locale),
       );
     }
 
@@ -85,13 +89,17 @@ export class BookingsService {
 
     const startAt = DateTime.fromISO(dto.startAt, { setZone: true });
     if (!startAt.isValid) {
-      throw new BadRequestException('Invalid startAt');
+      throw new BadRequestException(
+        this.i18n.t('errors.invalidStartAt', dto.locale),
+      );
     }
     if (startAt < DateTime.now()) {
-      throw new BadRequestException('Cannot book a time in the past');
+      throw new BadRequestException(
+        this.i18n.t('errors.pastStartAt', dto.locale),
+      );
     }
     const endAt = startAt.plus({ minutes: eventType.durationMinutes });
-    this.assertSameCalendarDay(startAt, endAt, timezone);
+    this.assertSameCalendarDay(startAt, endAt, timezone, dto.locale);
 
     let booking = await runSerializable(this.prisma, async (tx) => {
       await this.assertSlotIsBookable(
@@ -100,6 +108,7 @@ export class BookingsService {
         startAt,
         endAt,
         timezone,
+        dto.locale,
       );
 
       return tx.booking.create({
@@ -121,7 +130,7 @@ export class BookingsService {
     });
 
     if (dto.location === LocationType.GOOGLE_MEET) {
-      booking = await this.attachFreshMeetLink(booking);
+      booking = await this.attachFreshMeetLink(booking, dto.locale);
     }
 
     await this.notificationJobsService.enqueue(booking.id, 'confirmed');
@@ -134,7 +143,7 @@ export class BookingsService {
     dto: ClientCancelBookingDto,
   ): Promise<BookingWithRelations> {
     const booking = await this.findByManageToken(token);
-    this.assertConfirmed(booking);
+    this.assertConfirmed(booking, booking.locale);
     await this.assertWithinNoticeWindow(booking.startAt, booking.locale);
 
     const updated = await this.applyCancellation(
@@ -155,8 +164,12 @@ export class BookingsService {
       where: { id: bookingId },
       include: BOOKING_INCLUDE,
     });
-    const booking = assertCoachOwnsOrIsAdmin(coach, found, 'Booking not found');
-    this.assertConfirmed(booking);
+    const booking = assertCoachOwnsOrIsAdmin(
+      coach,
+      found,
+      this.i18n.t('errors.bookingNotFound', coach.preferredLocale),
+    );
+    this.assertConfirmed(booking, coach.preferredLocale);
 
     const updated = await this.applyCancellation(
       booking,
@@ -172,7 +185,7 @@ export class BookingsService {
     dto: RescheduleBookingDto,
   ): Promise<BookingWithRelations> {
     const booking = await this.findByManageToken(token);
-    this.assertConfirmed(booking);
+    this.assertConfirmed(booking, booking.locale);
     await this.assertWithinNoticeWindow(booking.startAt, booking.locale);
 
     const settings = await this.settingsService.get();
@@ -180,17 +193,21 @@ export class BookingsService {
 
     const startAt = DateTime.fromISO(dto.startAt, { setZone: true });
     if (!startAt.isValid) {
-      throw new BadRequestException('Invalid startAt');
+      throw new BadRequestException(
+        this.i18n.t('errors.invalidStartAt', booking.locale),
+      );
     }
     if (startAt < DateTime.now()) {
-      throw new BadRequestException('Cannot book a time in the past');
+      throw new BadRequestException(
+        this.i18n.t('errors.pastStartAt', booking.locale),
+      );
     }
     const durationMinutes = DateTime.fromJSDate(booking.endAt).diff(
       DateTime.fromJSDate(booking.startAt),
       'minutes',
     ).minutes;
     const endAt = startAt.plus({ minutes: durationMinutes });
-    this.assertSameCalendarDay(startAt, endAt, timezone);
+    this.assertSameCalendarDay(startAt, endAt, timezone, booking.locale);
 
     let updated = await runSerializable(this.prisma, async (tx) => {
       await this.assertSlotIsBookable(
@@ -199,6 +216,7 @@ export class BookingsService {
         startAt,
         endAt,
         timezone,
+        booking.locale,
         booking.id,
       );
 
@@ -224,7 +242,7 @@ export class BookingsService {
       // deleteOnFailure: false -- this booking already existed and was
       // confirmed before the reschedule; a transient Google API failure here
       // must not delete the client's booking outright (see attachFreshMeetLink).
-      updated = await this.attachFreshMeetLink(updated, {
+      updated = await this.attachFreshMeetLink(updated, booking.locale, {
         deleteOnFailure: false,
       });
     }
@@ -255,6 +273,7 @@ export class BookingsService {
 
   private async attachFreshMeetLink(
     booking: BookingWithRelations,
+    locale: string,
     options: { deleteOnFailure: boolean } = { deleteOnFailure: true },
   ): Promise<BookingWithRelations> {
     try {
@@ -280,7 +299,7 @@ export class BookingsService {
         );
         await this.prisma.booking.delete({ where: { id: booking.id } });
         throw new ServiceUnavailableException(
-          'Could not create the Google Meet link, please try again',
+          this.i18n.t('errors.meetLinkCreateFailed', locale),
         );
       }
       // Called from rescheduleByClient(): the booking already existed and
@@ -293,14 +312,19 @@ export class BookingsService {
         error,
       );
       throw new ServiceUnavailableException(
-        'The booking time was updated, but the Google Meet link could not be regenerated. Please contact us so we can send the new link.',
+        this.i18n.t('errors.meetLinkRegenerateFailed', locale),
       );
     }
   }
 
-  private assertConfirmed(booking: { status: BookingStatus }): void {
+  private assertConfirmed(
+    booking: { status: BookingStatus },
+    locale: string,
+  ): void {
     if (booking.status !== BookingStatus.CONFIRMED) {
-      throw new ConflictException('This booking is not active');
+      throw new ConflictException(
+        this.i18n.t('errors.bookingNotActive', locale),
+      );
     }
   }
 
@@ -325,12 +349,13 @@ export class BookingsService {
     startAt: DateTime,
     endAt: DateTime,
     timezone: string,
+    locale: string,
   ): void {
     const startDate = startAt.setZone(timezone).toISODate();
     const endDate = endAt.setZone(timezone).toISODate();
     if (startDate !== endDate) {
       throw new BadRequestException(
-        'Booking may not span multiple calendar days',
+        this.i18n.t('errors.spanMultipleDays', locale),
       );
     }
   }
@@ -342,6 +367,7 @@ export class BookingsService {
     startAt: DateTime,
     endAt: DateTime,
     timezone: string,
+    locale: string,
     excludeBookingId?: string,
   ): Promise<void> {
     const inTz = startAt.setZone(timezone);
@@ -361,7 +387,7 @@ export class BookingsService {
       );
     if (!withinSchedule) {
       throw new ConflictException(
-        "Selected time is outside the coach's availability",
+        this.i18n.t('errors.outsideAvailability', locale),
       );
     }
 
@@ -375,9 +401,7 @@ export class BookingsService {
       },
     });
     if (overlapping) {
-      throw new ConflictException(
-        'Selected time was just booked - please pick another slot',
-      );
+      throw new ConflictException(this.i18n.t('errors.slotJustBooked', locale));
     }
   }
 }

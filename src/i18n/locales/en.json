@@ -52,5 +52,18 @@
   "email.bookingRescheduled.coach.heading": "A booking was rescheduled",
   "email.bookingRescheduled.coach.intro": "{{clientName}} rescheduled their booking.",
 
-  "errors.bookingNoticeWindow": "This booking can only be changed or cancelled at least {{hours}} hours before the appointment."
+  "errors.bookingNoticeWindow": "This booking can only be changed or cancelled at least {{hours}} hours before the appointment.",
+  "errors.bookingNotFound": "Booking not found.",
+  "errors.eventTypeNotFound": "Event type not found.",
+  "errors.locationNotOffered": "This event type does not offer the selected location.",
+  "errors.invalidStartAt": "Invalid start time.",
+  "errors.pastStartAt": "Cannot book a time in the past.",
+  "errors.meetLinkCreateFailed": "Could not create the Google Meet link, please try again.",
+  "errors.meetLinkRegenerateFailed": "The booking time was updated, but the Google Meet link could not be regenerated. Please contact us so we can send the new link.",
+  "errors.bookingNotActive": "This booking is not active.",
+  "errors.spanMultipleDays": "Booking may not span multiple calendar days.",
+  "errors.outsideAvailability": "Selected time is outside the coach's availability.",
+  "errors.slotJustBooked": "Selected time was just booked – please pick another slot.",
+  "errors.invalidDateRange": "Invalid date range.",
+  "errors.rangeTooLong": "Range may not exceed {{days}} days."
 }
