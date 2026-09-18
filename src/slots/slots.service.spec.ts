@@ -1,9 +1,14 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { DateTime } from 'luxon';
 import { LocationType, type Coach, type EventType } from '@prisma/client';
 import { AvailabilityService } from '../availability/availability.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
-import { createTestCoach, createTestEventType } from '../test/factories.js';
+import {
+  createFullWeekAvailability,
+  createTestCoach,
+  createTestEventType,
+} from '../test/factories.js';
 import {
   disconnectTestPrisma,
   resetDatabase,
@@ -104,6 +109,25 @@ describe('SlotsService (integration)', () => {
       to: '2026-10-01',
     });
     expect(slots).toHaveLength(2);
+  });
+
+  it('excludes slots inside the notice window, using settings.cancellationNoticeHours rather than a hardcoded value', async () => {
+    await settingsService.update({ cancellationNoticeHours: 2 });
+    await createFullWeekAvailability(coach.id);
+
+    const from = DateTime.now().toISODate()!;
+    const to = DateTime.now().plus({ days: 1 }).toISODate()!;
+    const slots = await service.computeSlots({
+      eventTypeId: eventType.id,
+      from,
+      to,
+    });
+
+    const cutoff = DateTime.now().plus({ hours: 2 });
+    expect(slots.length).toBeGreaterThan(0);
+    expect(slots.every((s) => DateTime.fromISO(s.startAt) >= cutoff)).toBe(
+      true,
+    );
   });
 
   it('returns no slots for a day the coach has no availability on', async () => {

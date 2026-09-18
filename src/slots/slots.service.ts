@@ -50,7 +50,12 @@ export class SlotsService {
       );
     }
 
-    const now = DateTime.now();
+    // Slots inside the notice window aren't offered at all -- a client
+    // shouldn't be able to book (or reschedule into) a time the coach
+    // wouldn't be allowed to cancel or move away from herself.
+    const cutoff = DateTime.now().plus({
+      hours: settings.cancellationNoticeHours,
+    });
     const existingBookings = await this.prisma.booking.findMany({
       where: {
         coachId: eventType.coachId,
@@ -92,7 +97,7 @@ export class SlotsService {
           });
           const endAt = startAt.plus({ minutes: eventType.durationMinutes });
 
-          if (startAt < now) {
+          if (startAt < cutoff) {
             continue;
           }
 
