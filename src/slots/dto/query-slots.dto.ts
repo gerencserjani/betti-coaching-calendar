@@ -1,4 +1,4 @@
-import { IsDateString, IsString } from 'class-validator';
+import { IsDateString, IsOptional, IsString } from 'class-validator';
 
 export class QuerySlotsDto {
   @IsString()
@@ -9,4 +9,10 @@ export class QuerySlotsDto {
 
   @IsDateString()
   to!: string;
+
+  // Set when rescheduling: the booking's own current slot would otherwise
+  // conflict with itself and never show up as pickable.
+  @IsOptional()
+  @IsString()
+  excludeBookingId?: string;
 }

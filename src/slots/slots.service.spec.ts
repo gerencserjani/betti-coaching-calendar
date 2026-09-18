@@ -94,6 +94,40 @@ describe('SlotsService (integration)', () => {
     expect(slots[0].startAt).toBe('2026-10-01T07:30:00.000Z');
   });
 
+  it('does not treat a booking as a conflict with itself when excludeBookingId matches', async () => {
+    const booking = await testPrisma.booking.create({
+      data: {
+        eventTypeId: eventType.id,
+        coachId: coach.id,
+        startAt: new Date('2026-10-01T07:00:00.000Z'),
+        endAt: new Date('2026-10-01T07:30:00.000Z'),
+        location: LocationType.PHONE,
+        clientName: 'Rescheduling client',
+        clientEmail: 'rescheduling@example.com',
+        clientPhone: '+36301234567',
+        manageToken: 'rescheduling-booking-token',
+      },
+    });
+
+    const withoutExclude = await service.computeSlots({
+      eventTypeId: eventType.id,
+      from: '2026-10-01',
+      to: '2026-10-01',
+    });
+    expect(withoutExclude).toHaveLength(1);
+
+    const withExclude = await service.computeSlots({
+      eventTypeId: eventType.id,
+      from: '2026-10-01',
+      to: '2026-10-01',
+      excludeBookingId: booking.id,
+    });
+    expect(withExclude).toHaveLength(2);
+    expect(withExclude.map((s) => s.startAt)).toContain(
+      '2026-10-01T07:00:00.000Z',
+    );
+  });
+
   it('does not exclude a slot from a CANCELLED booking at the same time', async () => {
     await testPrisma.booking.create({
       data: {
