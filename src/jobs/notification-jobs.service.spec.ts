@@ -1,5 +1,9 @@
 import { jest } from '@jest/globals';
 import { LocationType } from '@prisma/client';
+import type {
+  GoogleCalendarService,
+  MeetEventResult,
+} from '../google/google-calendar.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import type {
   BookingWithRelations,
@@ -34,6 +38,18 @@ function fakeNotificationsService(): jest.Mocked<NotificationsService> {
   } as unknown as jest.Mocked<NotificationsService>;
 }
 
+function fakeGoogleCalendarService(): jest.Mocked<GoogleCalendarService> {
+  return {
+    createMeetEvent: jest
+      .fn<() => Promise<MeetEventResult>>()
+      .mockResolvedValue({
+        eventId: 'fake-event-id',
+        meetLink: 'https://meet.google.com/fake-link',
+      }),
+    deleteEvent: jest.fn().mockResolvedValue(undefined),
+  } as unknown as jest.Mocked<GoogleCalendarService>;
+}
+
 async function waitFor(
   condition: () => boolean,
   timeoutMs = 15_000,
@@ -59,6 +75,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
   // Instead, one worker is registered in beforeAll, and each test resets the
   // same mock's call history in place.
   const notificationsService = fakeNotificationsService();
+  const googleCalendarService = fakeGoogleCalendarService();
   let service: NotificationJobsService;
 
   beforeAll(async () => {
@@ -67,6 +84,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
       pgBossService,
       prisma,
       notificationsService,
+      googleCalendarService,
     );
     await service.onModuleInit();
   });
@@ -88,13 +106,24 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
     notificationsService.notifyBookingRescheduled
       .mockReset()
       .mockResolvedValue(undefined);
+    googleCalendarService.createMeetEvent.mockReset().mockResolvedValue({
+      eventId: 'fake-event-id',
+      meetLink: 'https://meet.google.com/fake-link',
+    });
+    googleCalendarService.deleteEvent.mockReset().mockResolvedValue(undefined);
   });
 
-  async function createBooking(): Promise<BookingWithRelations> {
+  async function createBooking(
+    overrides: {
+      location?: LocationType;
+      meetLink?: string;
+      googleEventId?: string;
+    } = {},
+  ): Promise<BookingWithRelations> {
     const coach = await createTestCoach();
     await createFullWeekAvailability(coach.id);
     const eventType = await createTestEventType(coach.id, {
-      locations: [LocationType.PHONE],
+      locations: [overrides.location ?? LocationType.PHONE],
     });
     return testPrisma.booking.create({
       data: {
@@ -102,11 +131,13 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
         coachId: coach.id,
         startAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         endAt: new Date(Date.now() + 24 * 60 * 60 * 1000 + 30 * 60 * 1000),
-        location: LocationType.PHONE,
+        location: overrides.location ?? LocationType.PHONE,
         clientName: 'Test Client',
         clientEmail: 'client@example.com',
         clientPhone: '+36301234567',
-        manageToken: `job-token-${Date.now()}`,
+        manageToken: `job-token-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        meetLink: overrides.meetLink,
+        googleEventId: overrides.googleEventId,
       },
       include: { eventType: true, coach: true },
     }) as unknown as Promise<BookingWithRelations>;
@@ -176,6 +207,105 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
     );
     expect(
       notificationsService.notifyBookingConfirmed.mock.calls.length,
+    ).toBeGreaterThanOrEqual(2);
+  });
+
+  it('creates the Google Meet link for a confirmed GOOGLE_MEET booking before sending the email', async () => {
+    const booking = await createBooking({ location: LocationType.GOOGLE_MEET });
+
+    await service.enqueue(booking.id, 'confirmed');
+
+    await waitFor(
+      () => notificationsService.notifyBookingConfirmed.mock.calls.length > 0,
+    );
+    expect(googleCalendarService.createMeetEvent).toHaveBeenCalledTimes(1);
+    const [passed] = notificationsService.notifyBookingConfirmed.mock
+      .calls[0] as [BookingWithRelations];
+    expect(passed.meetLink).toBe('https://meet.google.com/fake-link');
+    expect(passed.googleEventId).toBe('fake-event-id');
+
+    const persisted = await testPrisma.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+    });
+    expect(persisted.meetLink).toBe('https://meet.google.com/fake-link');
+  });
+
+  it('creates the Google Meet link for a rescheduled GOOGLE_MEET booking too', async () => {
+    const booking = await createBooking({ location: LocationType.GOOGLE_MEET });
+
+    await service.enqueue(booking.id, 'rescheduled');
+
+    await waitFor(
+      () => notificationsService.notifyBookingRescheduled.mock.calls.length > 0,
+    );
+    expect(googleCalendarService.createMeetEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not create a Meet link for a cancelled GOOGLE_MEET booking', async () => {
+    const booking = await createBooking({ location: LocationType.GOOGLE_MEET });
+
+    await service.enqueue(booking.id, 'cancelled');
+
+    await waitFor(
+      () => notificationsService.notifyBookingCancelled.mock.calls.length > 0,
+    );
+    expect(googleCalendarService.createMeetEvent).not.toHaveBeenCalled();
+  });
+
+  it('does not create a Meet link for a non-GOOGLE_MEET booking', async () => {
+    const booking = await createBooking({ location: LocationType.PHONE });
+
+    await service.enqueue(booking.id, 'confirmed');
+
+    await waitFor(
+      () => notificationsService.notifyBookingConfirmed.mock.calls.length > 0,
+    );
+    expect(googleCalendarService.createMeetEvent).not.toHaveBeenCalled();
+  });
+
+  it('does not create a duplicate Meet link if the booking already has one (idempotent retry)', async () => {
+    const booking = await createBooking({
+      location: LocationType.GOOGLE_MEET,
+      meetLink: 'https://meet.google.com/already-there',
+      googleEventId: 'already-there-id',
+    });
+
+    await service.enqueue(booking.id, 'confirmed');
+
+    await waitFor(
+      () => notificationsService.notifyBookingConfirmed.mock.calls.length > 0,
+    );
+    expect(googleCalendarService.createMeetEvent).not.toHaveBeenCalled();
+    const [passed] = notificationsService.notifyBookingConfirmed.mock
+      .calls[0] as [BookingWithRelations];
+    expect(passed.meetLink).toBe('https://meet.google.com/already-there');
+  });
+
+  it('retries without deleting the booking if Meet link creation fails, and eventually succeeds', async () => {
+    const booking = await createBooking({ location: LocationType.GOOGLE_MEET });
+    googleCalendarService.createMeetEvent.mockRejectedValueOnce(
+      new Error('Google API down'),
+    );
+
+    await service.enqueue(booking.id, 'confirmed');
+
+    // Right after the first (failing) attempt: unlike the old synchronous
+    // flow, a transient Google API failure here must not delete an
+    // otherwise-valid booking -- it should just retry.
+    await waitFor(
+      () => googleCalendarService.createMeetEvent.mock.calls.length >= 1,
+    );
+    const afterFirstAttempt = await testPrisma.booking.findUnique({
+      where: { id: booking.id },
+    });
+    expect(afterFirstAttempt).not.toBeNull();
+
+    // The retry (using the now-resolved mock) should go on to succeed.
+    await waitFor(
+      () => notificationsService.notifyBookingConfirmed.mock.calls.length > 0,
+    );
+    expect(
+      googleCalendarService.createMeetEvent.mock.calls.length,
     ).toBeGreaterThanOrEqual(2);
   });
 });

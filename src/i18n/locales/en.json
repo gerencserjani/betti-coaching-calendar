@@ -58,8 +58,6 @@
   "errors.locationNotOffered": "This event type does not offer the selected location.",
   "errors.invalidStartAt": "Invalid start time.",
   "errors.pastStartAt": "Cannot book a time in the past.",
-  "errors.meetLinkCreateFailed": "Could not create the Google Meet link, please try again.",
-  "errors.meetLinkRegenerateFailed": "The booking time was updated, but the Google Meet link could not be regenerated. Please contact us so we can send the new link.",
   "errors.bookingNotActive": "This booking is not active.",
   "errors.spanMultipleDays": "Booking may not span multiple calendar days.",
   "errors.outsideAvailability": "Selected time is outside the coach's availability.",

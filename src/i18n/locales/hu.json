@@ -58,8 +58,6 @@
   "errors.locationNotOffered": "Ez a szolgáltatás nem kínálja a kiválasztott helyszínt.",
   "errors.invalidStartAt": "Érvénytelen időpont.",
   "errors.pastStartAt": "Múltbeli időpont nem foglalható.",
-  "errors.meetLinkCreateFailed": "Nem sikerült létrehozni a Google Meet linket, kérjük próbáld újra.",
-  "errors.meetLinkRegenerateFailed": "Az időpont módosult, de a Google Meet linket nem sikerült újra létrehozni. Kérjük, vedd fel velünk a kapcsolatot, hogy elküldhessük az új linket.",
   "errors.bookingNotActive": "Ez a foglalás már nem aktív.",
   "errors.spanMultipleDays": "A foglalás nem nyúlhat át másik naptári napra.",
   "errors.outsideAvailability": "A kiválasztott időpont kívül esik a coach elérhetőségén.",

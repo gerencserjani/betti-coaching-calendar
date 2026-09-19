@@ -1,5 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { LocationType } from '@prisma/client';
 import type { JobWithMetadata } from 'pg-boss';
+import { GoogleCalendarService } from '../google/google-calendar.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   NotificationsService,
@@ -33,6 +35,7 @@ export class NotificationJobsService implements OnModuleInit {
     private readonly pgBossService: PgBossService,
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly googleCalendarService: GoogleCalendarService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -84,8 +87,11 @@ export class NotificationJobsService implements OnModuleInit {
       return;
     }
 
-    const typed = booking as BookingWithRelations;
+    let typed = booking as BookingWithRelations;
     try {
+      if (kind === 'confirmed' || kind === 'rescheduled') {
+        typed = await this.ensureMeetLink(typed);
+      }
       switch (kind) {
         case 'confirmed':
           await this.notificationsService.notifyBookingConfirmed(typed);
@@ -101,14 +107,46 @@ export class NotificationJobsService implements OnModuleInit {
         `Sent ${kind} notification emails for booking ${bookingId}`,
       );
     } catch (error) {
-      // Log immediately, with the real error, rather than leaving this only
+      // Covers both steps above (Meet link creation and the email send) --
+      // log immediately, with the real error, rather than leaving this only
       // discoverable by querying pgboss.job's `output` column directly --
       // rethrow so pg-boss's own retry/backoff still applies as configured.
       this.logger.error(
-        `Failed to send ${kind} notification for booking ${bookingId} (job ${job.id}, attempt ${job.retryCount + 1}/${job.retryLimit + 1})`,
+        `Failed to process ${kind} notification job for booking ${bookingId} (job ${job.id}, attempt ${job.retryCount + 1}/${job.retryLimit + 1})`,
         error,
       );
       throw error;
     }
+  }
+
+  /**
+   * Creates the Google Meet event if this booking needs one and doesn't
+   * already have it (idempotent, so a retried job after a failed email send
+   * won't create a duplicate event). This is the actual failure-prone
+   * external API call in the whole notification flow -- keeping it here
+   * means a transient Google API error just retries like anything else in
+   * this job, instead of failing the client's booking/reschedule request or
+   * (worse, as it used to) deleting an otherwise-valid booking outright.
+   */
+  private async ensureMeetLink(
+    booking: BookingWithRelations,
+  ): Promise<BookingWithRelations> {
+    if (booking.location !== LocationType.GOOGLE_MEET || booking.meetLink) {
+      return booking;
+    }
+
+    const meet = await this.googleCalendarService.createMeetEvent({
+      title: `${booking.eventType.title} — ${booking.clientName}`,
+      description: booking.clientNote ?? undefined,
+      startAt: booking.startAt,
+      endAt: booking.endAt,
+      attendeeEmails: [booking.clientEmail, booking.coach.email],
+    });
+    const updated = await this.prisma.booking.update({
+      where: { id: booking.id },
+      data: { meetLink: meet.meetLink, googleEventId: meet.eventId },
+      include: BOOKING_INCLUDE,
+    });
+    return updated as BookingWithRelations;
   }
 }

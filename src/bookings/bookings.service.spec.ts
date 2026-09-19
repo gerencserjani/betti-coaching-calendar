@@ -121,30 +121,18 @@ describe('BookingsService (integration)', () => {
       );
     });
 
-    it('generates a Google Meet link for a GOOGLE_MEET booking', async () => {
+    it('does not create the Google Meet link synchronously for a GOOGLE_MEET booking -- that happens in the notification job', async () => {
       const booking = await service.create(
         createDto({ location: LocationType.GOOGLE_MEET }),
       );
 
-      expect(googleCalendarService.createMeetEvent).toHaveBeenCalledTimes(1);
-      expect(booking.meetLink).toBe('https://meet.google.com/fake-link');
-      expect(booking.googleEventId).toBe('fake-event-id');
-    });
-
-    it('rolls back the booking if Google Meet creation fails, with a message in the booking locale', async () => {
-      googleCalendarService.createMeetEvent.mockRejectedValueOnce(
-        new Error('Google API down'),
+      expect(googleCalendarService.createMeetEvent).not.toHaveBeenCalled();
+      expect(booking.meetLink).toBeNull();
+      expect(booking.googleEventId).toBeNull();
+      expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
+        booking.id,
+        'confirmed',
       );
-
-      await expect(
-        service.create(createDto({ location: LocationType.GOOGLE_MEET })),
-      ).rejects.toThrow(
-        'Could not create the Google Meet link, please try again.',
-      );
-
-      const bookings = await testPrisma.booking.findMany();
-      expect(bookings).toHaveLength(0);
-      expect(notificationJobsService.enqueue).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException for a missing event type', async () => {
@@ -354,13 +342,18 @@ describe('BookingsService (integration)', () => {
       );
     });
 
-    it('regenerates the Google Meet link when rescheduling a GOOGLE_MEET booking', async () => {
+    it('clears an existing Google Meet link when rescheduling, but leaves creating the replacement to the notification job', async () => {
       const booking = await service.create(
         createDto({ location: LocationType.GOOGLE_MEET }),
       );
-      googleCalendarService.createMeetEvent.mockResolvedValueOnce({
-        eventId: 'new-event-id',
-        meetLink: 'https://meet.google.com/new-link',
+      // Simulate the notification job having already attached a Meet link
+      // for the original booking (create() itself no longer does this).
+      await testPrisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          meetLink: 'https://meet.google.com/fake-link',
+          googleEventId: 'fake-event-id',
+        },
       });
 
       const rescheduled = await service.rescheduleByClient(
@@ -373,8 +366,25 @@ describe('BookingsService (integration)', () => {
       expect(googleCalendarService.deleteEvent).toHaveBeenCalledWith(
         'fake-event-id',
       );
-      expect(rescheduled.meetLink).toBe('https://meet.google.com/new-link');
-      expect(rescheduled.googleEventId).toBe('new-event-id');
+      expect(googleCalendarService.createMeetEvent).not.toHaveBeenCalled();
+      expect(rescheduled.meetLink).toBeNull();
+      expect(rescheduled.googleEventId).toBeNull();
+      expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
+        booking.id,
+        'rescheduled',
+      );
+    });
+
+    it('does not call deleteEvent when rescheduling a GOOGLE_MEET booking that never got a link yet', async () => {
+      const booking = await service.create(
+        createDto({ location: LocationType.GOOGLE_MEET }),
+      );
+
+      await service.rescheduleByClient(booking.manageToken, {
+        startAt: `${FUTURE_DAY}T15:00:00+02:00`,
+      });
+
+      expect(googleCalendarService.deleteEvent).not.toHaveBeenCalled();
     });
 
     it('rejects rescheduling onto a slot that is already booked', async () => {
