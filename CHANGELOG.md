@@ -1,3 +1,9 @@
+## [1.8.2](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.1...v1.8.2) (2026-10-14)
+
+### Bug Fixes
+
+- replace stale hardcoded test dates with dynamically computed future dates ([9a4ccb9](https://github.com/gerencserjani/betti-coaching-calendar/commit/9a4ccb9f1d4c397403b833eb91ed9ff683d0e964))
+
 ## [1.8.1](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.0...v1.8.1) (2026-10-14)
 
 ### Performance Improvements
