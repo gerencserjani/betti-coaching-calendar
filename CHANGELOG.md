@@ -1,3 +1,9 @@
+## [1.8.1](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.0...v1.8.1) (2026-10-14)
+
+### Performance Improvements
+
+- cut Cloud Run cold-start latency (migration boot step, lazy email import, googleapis size) ([2429622](https://github.com/gerencserjani/betti-coaching-calendar/commit/24296227c9e947359ceff7bdda3a112205d980ea))
+
 # [1.8.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.7.3...v1.8.0) (2026-10-14)
 
 ### Features
