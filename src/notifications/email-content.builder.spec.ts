@@ -19,6 +19,7 @@ function baseContext(
     businessAddress: 'Budapest, Teszt utca 1.',
     clientPhone: '+36301234567',
     timezone: 'Europe/Budapest',
+    logoUrl: 'https://example.com/email-logo.png',
     manageUrl: 'https://example.com/manage?token=abc',
     googleCalendarUrl: 'https://calendar.google.com/calendar/render?...',
     ...overrides,

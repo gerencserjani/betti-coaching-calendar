@@ -18,6 +18,7 @@ export interface BookingEmailContext {
   meetLink?: string;
   clientPhone: string;
   timezone: string;
+  logoUrl: string;
   manageUrl: string;
   googleCalendarUrl: string;
   cancelledBy?: CancelledBy;
@@ -58,6 +59,7 @@ export class EmailContentBuilder {
           title: ctx.eventTypeTitle,
         }),
         props: {
+          logoUrl: ctx.logoUrl,
           previewText: t('email.bookingCancelled.client.preview'),
           heading: t('email.bookingCancelled.client.heading'),
           intro: t(
@@ -80,6 +82,7 @@ export class EmailContentBuilder {
         title: ctx.eventTypeTitle,
       }),
       props: {
+        logoUrl: ctx.logoUrl,
         previewText: t('email.bookingCancelled.coach.preview'),
         heading: t('email.bookingCancelled.coach.heading'),
         intro: t(
@@ -144,6 +147,7 @@ export class EmailContentBuilder {
       return {
         subject: t(`email.${kind}.client.subject`, vars),
         props: {
+          logoUrl: ctx.logoUrl,
           previewText: t(`email.${kind}.client.preview`, vars),
           heading: t(`email.${kind}.client.heading`),
           intro: t(`email.${kind}.client.intro`, vars),
@@ -161,6 +165,7 @@ export class EmailContentBuilder {
     return {
       subject: t(`email.${kind}.coach.subject`, vars),
       props: {
+        logoUrl: ctx.logoUrl,
         previewText: t(`email.${kind}.coach.preview`, vars),
         heading: t(`email.${kind}.coach.heading`),
         intro: t(`email.${kind}.coach.intro`, vars),
