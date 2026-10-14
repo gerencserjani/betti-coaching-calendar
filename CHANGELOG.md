@@ -1,3 +1,9 @@
+## [1.8.3](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.2...v1.8.3) (2026-10-14)
+
+### Performance Improvements
+
+- switch production to Neon's pooled connection, keep direct for migrations ([f6d97fd](https://github.com/gerencserjani/betti-coaching-calendar/commit/f6d97fde8dc00000e96c6c8d60c716fb2b4e5946))
+
 ## [1.8.2](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.1...v1.8.2) (2026-10-14)
 
 ### Bug Fixes
