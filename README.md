@@ -13,7 +13,7 @@ open-source, MIT-licensed community fork) — much simplified for one frontend.
 graph TB
     Client["Browser / frontend<br/>(Vercel)"]
     API["NestJS API<br/>Google Cloud Run — scale-to-zero"]
-    DB[("Postgres<br/>Neon — scale-to-zero, direct connection")]
+    DB[("Postgres<br/>Neon — scale-to-zero, pooled connection")]
     Gmail["Gmail SMTP<br/>(App Password)"]
     GCal["Google Calendar API<br/>(one shared OAuth account)"]
 
@@ -114,7 +114,14 @@ each other's fixtures mid-test.
 See `.env.example` for the full list. Notes on the less obvious ones:
 
 - **`DATABASE_URL`** — read directly by Prisma; matches the credentials in
-  `docker-compose.yml` out of the box.
+  `docker-compose.yml` out of the box. In production this is Neon's **pooled**
+  (PgBouncer) connection string, with `?pgbouncer=true` appended -- not the
+  direct one. See "Production hosting" below for why.
+- **`DIRECT_URL`** — production only. Neon's **direct** (non-pooled)
+  connection string, used only for schema migrations (`prisma migrate
+deploy`/`dev`, `prisma studio`) -- DDL isn't reliable through a transaction
+  pooler. Not needed locally: `prisma7.config.ts` falls back to `DATABASE_URL`
+  when this is unset, since local/test Postgres has no pooling distinction.
 - **`JWT_SECRET`** — signs the app's own login tokens (see "Auth" below).
   32+ random characters; generate with `openssl rand -base64 32`.
 - **`GMAIL_USER` / `GMAIL_APP_PASSWORD`** — email is sent through Gmail's own
@@ -343,6 +350,22 @@ The app is deployed as a container (`Dockerfile` at the repo root) to
 always-free tiers at this app's traffic level. See the write-up on why these
 two (and not Render/Railway/Fly.io) in the project conversation history if
 you need the reasoning.
+
+**Use Neon's pooled connection string for `DATABASE_URL`**, not the direct
+one (set `DIRECT_URL` to the direct one, for migrations -- see "Environment
+variables" above). Reasoning: Neon's compute scales to zero on idle, same as
+Cloud Run. pg-boss holds a long-lived connection pool that polls every few
+seconds in the background; when Neon suspends the compute out from under
+that pool, pg-boss's connection drops and it has to reconnect, sometimes
+repeatedly, before the compute fully stabilizes (seen in production as a
+burst of `pg-boss error` log lines for several minutes after every cold
+start). The pooled endpoint sits in front of the compute via PgBouncer and
+doesn't itself suspend, so it absorbs that churn instead of the app seeing
+it. It costs nothing extra on Neon's free tier -- billing there is CU-hours/
+storage/transfer, not per-connection-type -- and it's not a paid-only
+feature; it's always available, Neon just also needs you to use the direct
+one for migrations, since the pooled one can't run DDL/session-level
+operations reliably.
 
 Run `bash scripts/setup-production.sh` **directly in Git Bash** (not via
 PowerShell calling `bash`, and not through an AI-assistant's one-shot command
