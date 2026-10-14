@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
+import { DateTime } from 'luxon';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { PrismaExceptionFilter } from '../src/common/prisma-exception.filter.js';
@@ -21,6 +22,15 @@ import {
 import { CoachRole, LocationType } from '@prisma/client';
 
 jest.setTimeout(30_000);
+
+// Comfortably in the future (10 days clears the default 48h
+// cancellationNoticeHours with margin), computed at test-run time rather
+// than hardcoded -- a fixed calendar date goes stale once real time catches
+// up to it, since booking creation rejects any startAt in the past.
+const FUTURE_DAY = DateTime.now()
+  .setZone('Europe/Budapest')
+  .plus({ days: 10 })
+  .startOf('day');
 
 describe('App (e2e)', () => {
   let app: INestApplication;
@@ -128,7 +138,7 @@ describe('App (e2e)', () => {
         .post('/bookings')
         .send({
           eventTypeId: eventType.id,
-          startAt: '2026-10-01T10:00:00+02:00',
+          startAt: FUTURE_DAY.set({ hour: 10 }).toISO()!,
           location: LocationType.PHONE,
           clientName: 'E2E Client',
           clientEmail: 'e2e-client@example.com',
@@ -168,13 +178,11 @@ describe('App (e2e)', () => {
         locations: [LocationType.PHONE],
       });
 
-      const res = await request(app.getHttpServer())
-        .get('/slots')
-        .query({
-          eventTypeId: eventType.id,
-          from: '2026-10-01',
-          to: '2026-10-01',
-        });
+      const res = await request(app.getHttpServer()).get('/slots').query({
+        eventTypeId: eventType.id,
+        from: FUTURE_DAY.toISODate(),
+        to: FUTURE_DAY.toISODate(),
+      });
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
