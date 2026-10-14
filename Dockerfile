@@ -22,4 +22,9 @@ COPY --from=build /app/package.json ./
 # Cloud Run injects PORT (defaults to 8080) and expects the container to listen on it.
 EXPOSE 8080
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+# Migrations are applied once per deploy (see `npm run migrate:prod`), not
+# here -- running `prisma migrate deploy` in the boot path added ~7-8s to
+# every single cold start (CLI startup + a DB round-trip to check migration
+# state), even though the schema is already up to date almost every time a
+# fresh instance scales up from zero.
+CMD ["node", "dist/main.js"]

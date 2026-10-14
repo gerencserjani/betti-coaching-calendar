@@ -5,8 +5,8 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { google } from 'googleapis';
-import type { OAuth2Client } from 'google-auth-library';
+import { oauth2 } from '@googleapis/oauth2';
+import { OAuth2Client } from 'google-auth-library';
 import { decrypt, encrypt } from '../common/crypto.util.js';
 import type { AppConfig } from '../config/configuration.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -33,7 +33,7 @@ export class GoogleOAuthService {
 
   private newOAuthClient(): OAuth2Client {
     const { google: googleConfig } = this.configService.get<AppConfig>('app')!;
-    return new google.auth.OAuth2(
+    return new OAuth2Client(
       googleConfig.clientId,
       googleConfig.clientSecret,
       googleConfig.redirectUri,
@@ -63,8 +63,8 @@ export class GoogleOAuthService {
     }
     client.setCredentials(tokens);
 
-    const oauth2 = google.oauth2({ auth: client, version: 'v2' });
-    const { data: userInfo } = await oauth2.userinfo.get();
+    const oauth2Client = oauth2({ auth: client, version: 'v2' });
+    const { data: userInfo } = await oauth2Client.userinfo.get();
 
     const { encryptionKey } = this.configService.get<AppConfig>('app')!;
     await this.prisma.googleIntegration.upsert({

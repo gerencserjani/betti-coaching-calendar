@@ -1,12 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { render } from '@react-email/render';
 import nodemailer, { type Transporter } from 'nodemailer';
 import type { AppConfig } from '../config/configuration.js';
-import {
-  BookingEmail,
-  type BookingEmailProps,
-} from './templates/BookingEmail.js';
+import type { BookingEmailProps } from './templates/BookingEmail.js';
 
 export interface SendEmailInput {
   to: string;
@@ -35,6 +31,15 @@ export class EmailService {
   }
 
   async send(input: SendEmailInput): Promise<void> {
+    // Dynamic import, not a top-level one: @react-email/render pulls in a
+    // full React renderer, which is only ever needed once an email is
+    // actually about to go out (async, off a cold start's critical path) --
+    // loading it eagerly at module scope was adding real time to every cold
+    // start for every request, not just the ones that send mail.
+    const [{ render }, { BookingEmail }] = await Promise.all([
+      import('@react-email/render'),
+      import('./templates/BookingEmail.js'),
+    ]);
     const html = await render(BookingEmail(input.props));
 
     await this.transporter.sendMail({
