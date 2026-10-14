@@ -1,3 +1,9 @@
+# [1.8.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.7.3...v1.8.0) (2026-10-14)
+
+### Features
+
+- add brand logo to transactional booking emails ([d1adcfb](https://github.com/gerencserjani/betti-coaching-calendar/commit/d1adcfb10c0e503b326d574a431f3e7308e7fe7b))
+
 ## [1.7.3](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.7.2...v1.7.3) (2026-09-18)
 
 ### Bug Fixes
