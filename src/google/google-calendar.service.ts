@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { google } from 'googleapis';
+import { calendar as createCalendarClient } from '@googleapis/calendar';
 import { GoogleOAuthService } from './google-oauth.service.js';
 
 export interface CreateMeetEventInput {
@@ -26,7 +26,7 @@ export class GoogleCalendarService {
    */
   async createMeetEvent(input: CreateMeetEventInput): Promise<MeetEventResult> {
     const auth = await this.oauthService.getAuthenticatedClient();
-    const calendar = google.calendar({ version: 'v3', auth });
+    const calendar = createCalendarClient({ version: 'v3', auth });
 
     const { data } = await calendar.events.insert({
       calendarId: 'primary',
@@ -62,7 +62,7 @@ export class GoogleCalendarService {
 
   async deleteEvent(eventId: string): Promise<void> {
     const auth = await this.oauthService.getAuthenticatedClient();
-    const calendar = google.calendar({ version: 'v3', auth });
+    const calendar = createCalendarClient({ version: 'v3', auth });
     await calendar.events
       .delete({ calendarId: 'primary', eventId, sendUpdates: 'none' })
       .catch(() => {

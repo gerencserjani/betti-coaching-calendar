@@ -355,6 +355,25 @@ local-dev `.env`) and remembers what you've already entered if you stop and
 re-run it. The very last thing it prompts for is running
 `node scripts/seed-admin.mjs` against production — see "Auth" above.
 
+### Redeploying
+
+```
+gcloud run deploy betti-coaching-calendar --source . --region europe-west1 --project <project-id>
+```
+
+The container no longer runs `prisma migrate deploy` on boot (that was
+adding ~7-8s to _every_ cold start, not just deploys, for a check that's a
+no-op almost every time). Whenever a deploy includes a new migration, apply
+it once, separately, against production:
+
+```
+npm run migrate:prod
+```
+
+(reads `DATABASE_URL` from `.env.production`, same pattern as
+`jobs:dashboard:prod`). Order doesn't matter much either way, but migrating
+first means the new revision never serves traffic against an old schema.
+
 ## Known follow-ups
 
 - `npm audit` flags 4 high-severity advisories, all inside Prisma's own CLI
