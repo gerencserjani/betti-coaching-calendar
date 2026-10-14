@@ -113,6 +113,7 @@ export class NotificationsService {
       meetLink: booking.meetLink ?? undefined,
       clientPhone: booking.clientPhone,
       timezone: settings.businessTimezone,
+      logoUrl: `${frontendUrl}/email-logo.png`,
       // The frontend has no /bookings/manage route -- the manage UI lives
       // inline in the booking section on the homepage, reading a `manage`
       // query param (see Booking.tsx). No hash here: the content builder
