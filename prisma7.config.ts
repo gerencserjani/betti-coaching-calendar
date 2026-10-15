@@ -12,9 +12,9 @@ export default defineConfig({
     // Migrations need a direct (non-pooled) connection -- DDL/schema
     // introspection isn't reliable through a transaction pooler. Falls back
     // to DATABASE_URL so local dev/test (plain Docker Postgres, no pooling
-    // distinction) keeps working without a DIRECT_URL env var; only
-    // production sets DIRECT_URL, alongside a now-pooled DATABASE_URL used
-    // by the app itself (see PrismaService/PgBossService).
-    url: process.env['DIRECT_URL'] ?? process.env['DATABASE_URL'],
+    // distinction) keeps working without a DATABASE_DIRECT_URL env var;
+    // only production sets DATABASE_DIRECT_URL + DATABASE_POOLER_URL (the
+    // latter used by the app itself, see PrismaService/PgBossService).
+    url: process.env['DATABASE_DIRECT_URL'] ?? process.env['DATABASE_URL'],
   },
 });

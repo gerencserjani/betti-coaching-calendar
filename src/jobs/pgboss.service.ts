@@ -8,9 +8,10 @@ import { PgBoss } from 'pg-boss';
 
 /**
  * Thin lifecycle wrapper around a single PgBoss instance, shared by every
- * queue in the app. Reuses the same Postgres DATABASE_URL as Prisma - pg-boss
- * manages its own small connection pool and Postgres schema (`pgboss` by
- * default) alongside the Prisma-managed `public` schema.
+ * queue in the app. Reuses the same pooled Postgres connection as Prisma
+ * (DATABASE_POOLER_URL in production, falling back to DATABASE_URL locally)
+ * - pg-boss manages its own small connection pool and Postgres schema
+ * (`pgboss` by default) alongside the Prisma-managed `public` schema.
  *
  * No scheduler/cron drives this: `start()` here just lets pg-boss's own
  * internal supervisor run for as long as this process instance happens to be
@@ -20,7 +21,10 @@ import { PgBoss } from 'pg-boss';
 @Injectable()
 export class PgBossService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PgBossService.name);
-  readonly boss = new PgBoss({ connectionString: process.env.DATABASE_URL });
+  readonly boss = new PgBoss({
+    connectionString:
+      process.env.DATABASE_POOLER_URL ?? process.env.DATABASE_URL,
+  });
 
   async onModuleInit(): Promise<void> {
     this.boss.on('error', (error: unknown) =>

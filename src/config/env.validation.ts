@@ -3,6 +3,7 @@ import {
   IsEmail,
   IsIn,
   IsInt,
+  IsOptional,
   IsString,
   IsUrl,
   Max,
@@ -12,8 +13,22 @@ import {
 } from 'class-validator';
 
 class EnvironmentVariables {
+  // Exactly one of DATABASE_URL (local dev/test, no pooled/direct
+  // distinction) or the two production-only vars below must be present --
+  // checked after class-validator runs, since "at least one of" isn't a
+  // single-field constraint. See PrismaService/PgBossService
+  // (DATABASE_POOLER_URL) and prisma7.config.ts (DATABASE_DIRECT_URL).
+  @IsOptional()
   @IsString()
-  DATABASE_URL!: string;
+  DATABASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  DATABASE_POOLER_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  DATABASE_DIRECT_URL?: string;
 
   @IsInt()
   @Min(1)
@@ -67,6 +82,23 @@ export function validateEnv(config: Record<string, unknown>) {
       .map((error) => Object.values(error.constraints ?? {}).join(', '))
       .join('; ');
     throw new Error(`Invalid environment configuration: ${message}`);
+  }
+
+  // class-validator can't express "at least one of A or B" on its own --
+  // every connection the app/migrations actually make resolves through a
+  // DATABASE_POOLER_URL-or-DATABASE_URL / DATABASE_DIRECT_URL-or-DATABASE_URL
+  // fallback (see PrismaService/PgBossService/prisma7.config.ts), so fail
+  // fast here if a deploy forgets all the vars that one side needs instead
+  // of discovering it as a connection error at the first query.
+  if (!validated.DATABASE_POOLER_URL && !validated.DATABASE_URL) {
+    throw new Error(
+      'Invalid environment configuration: set DATABASE_POOLER_URL (production) or DATABASE_URL (local/test)',
+    );
+  }
+  if (!validated.DATABASE_DIRECT_URL && !validated.DATABASE_URL) {
+    throw new Error(
+      'Invalid environment configuration: set DATABASE_DIRECT_URL (production) or DATABASE_URL (local/test)',
+    );
   }
 
   // class-validator only checks that ENCRYPTION_KEY is a string; AES-256-GCM

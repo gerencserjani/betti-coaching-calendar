@@ -113,15 +113,19 @@ each other's fixtures mid-test.
 
 See `.env.example` for the full list. Notes on the less obvious ones:
 
-- **`DATABASE_URL`** — read directly by Prisma; matches the credentials in
-  `docker-compose.yml` out of the box. In production this is Neon's **pooled**
-  (PgBouncer) connection string, with `?pgbouncer=true` appended -- not the
-  direct one. See "Production hosting" below for why.
-- **`DIRECT_URL`** — production only. Neon's **direct** (non-pooled)
-  connection string, used only for schema migrations (`prisma migrate
-deploy`/`dev`, `prisma studio`) -- DDL isn't reliable through a transaction
-  pooler. Not needed locally: `prisma7.config.ts` falls back to `DATABASE_URL`
-  when this is unset, since local/test Postgres has no pooling distinction.
+- **`DATABASE_URL`** — the local/test connection string; matches the
+  credentials in `docker-compose.yml` out of the box. Also the fallback the
+  app and the migration tooling both use whenever the two production-only
+  vars below aren't set, since local/test Postgres has no pooled/direct
+  distinction.
+- **`DATABASE_POOLER_URL`** — production only. Neon's **pooled** (PgBouncer)
+  connection string, with `?pgbouncer=true` appended. Used by the running
+  app itself (`PrismaService`, `PgBossService`) for all normal
+  queries/jobs. See "Production hosting" below for why.
+- **`DATABASE_DIRECT_URL`** — production only. Neon's **direct**
+  (non-pooled) connection string, used only for schema migrations (`prisma
+migrate deploy`/`dev`, `prisma studio`) -- DDL isn't reliable through a
+  transaction pooler.
 - **`JWT_SECRET`** — signs the app's own login tokens (see "Auth" below).
   32+ random characters; generate with `openssl rand -base64 32`.
 - **`GMAIL_USER` / `GMAIL_APP_PASSWORD`** — email is sent through Gmail's own
@@ -351,9 +355,9 @@ always-free tiers at this app's traffic level. See the write-up on why these
 two (and not Render/Railway/Fly.io) in the project conversation history if
 you need the reasoning.
 
-**Use Neon's pooled connection string for `DATABASE_URL`**, not the direct
-one (set `DIRECT_URL` to the direct one, for migrations -- see "Environment
-variables" above). Reasoning: Neon's compute scales to zero on idle, same as
+**Set `DATABASE_POOLER_URL` to Neon's pooled connection string, and
+`DATABASE_DIRECT_URL` to the direct one** (used for migrations -- see
+"Environment variables" above). Reasoning: Neon's compute scales to zero on idle, same as
 Cloud Run. pg-boss holds a long-lived connection pool that polls every few
 seconds in the background; when Neon suspends the compute out from under
 that pool, pg-boss's connection drops and it has to reconnect, sometimes
@@ -393,9 +397,10 @@ it once, separately, against production:
 npm run migrate:prod
 ```
 
-(reads `DATABASE_URL` from `.env.production`, same pattern as
-`jobs:dashboard:prod`). Order doesn't matter much either way, but migrating
-first means the new revision never serves traffic against an old schema.
+(reads `.env.production`, same pattern as `jobs:dashboard:prod` -- `prisma7.config.ts`
+picks up `DATABASE_DIRECT_URL` from it automatically). Order doesn't matter
+much either way, but migrating first means the new revision never serves
+traffic against an old schema.
 
 ## Known follow-ups
 

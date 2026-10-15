@@ -9,7 +9,13 @@ export class PrismaService
 {
   constructor() {
     super({
-      adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+      // DATABASE_POOLER_URL in production (Neon's pooled endpoint -- see
+      // README "Production hosting"); falls back to DATABASE_URL for local
+      // dev/test, which has no pooled/direct distinction.
+      adapter: new PrismaPg({
+        connectionString:
+          process.env.DATABASE_POOLER_URL ?? process.env.DATABASE_URL,
+      }),
     });
   }
 
