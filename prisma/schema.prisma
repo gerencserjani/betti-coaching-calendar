@@ -47,7 +47,8 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  coaches Coach[]
+  coaches  Coach[]
+  settings Settings?
 }
 
 model Coach {
@@ -162,9 +163,12 @@ model Booking {
   @@index([status, startAt])
 }
 
-/// Singleton row (id is always "singleton").
+/// One row per Tenant -- its business profile (address, cancellation
+/// policy, timezone). Keyed directly by tenantId (1:1 extension of Tenant,
+/// same pattern as every other per-tenant table), not a separate id.
 model Settings {
-  id                      String   @id @default("singleton")
+  tenantId                String   @id
+  tenant                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   businessAddress         String   @default("")
   cancellationNoticeHours Int      @default(48)
   businessTimezone        String   @default("Europe/Budapest")

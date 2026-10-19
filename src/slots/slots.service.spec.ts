@@ -175,7 +175,9 @@ describe('SlotsService (integration)', () => {
   });
 
   it('excludes slots inside the notice window, using settings.cancellationNoticeHours rather than a hardcoded value', async () => {
-    await settingsService.update({ cancellationNoticeHours: 2 });
+    await settingsService.update(coach.tenantId, {
+      cancellationNoticeHours: 2,
+    });
     await createFullWeekAvailability(coach.id);
 
     const from = DateTime.now().toISODate()!;

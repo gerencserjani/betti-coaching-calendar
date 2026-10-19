@@ -84,7 +84,7 @@ export class BookingsService {
       );
     }
 
-    const settings = await this.settingsService.get();
+    const settings = await this.settingsService.get(eventType.coach.tenantId);
     const timezone = settings.businessTimezone;
 
     const startAt = DateTime.fromISO(dto.startAt, { setZone: true });
@@ -144,7 +144,11 @@ export class BookingsService {
   ): Promise<BookingWithRelations> {
     const booking = await this.findByManageToken(token);
     this.assertConfirmed(booking, booking.locale);
-    await this.assertWithinNoticeWindow(booking.startAt, booking.locale);
+    await this.assertWithinNoticeWindow(
+      booking.coach.tenantId,
+      booking.startAt,
+      booking.locale,
+    );
 
     const updated = await this.applyCancellation(
       booking,
@@ -186,9 +190,13 @@ export class BookingsService {
   ): Promise<BookingWithRelations> {
     const booking = await this.findByManageToken(token);
     this.assertConfirmed(booking, booking.locale);
-    await this.assertWithinNoticeWindow(booking.startAt, booking.locale);
+    await this.assertWithinNoticeWindow(
+      booking.coach.tenantId,
+      booking.startAt,
+      booking.locale,
+    );
 
-    const settings = await this.settingsService.get();
+    const settings = await this.settingsService.get(booking.coach.tenantId);
     const timezone = settings.businessTimezone;
 
     const startAt = DateTime.fromISO(dto.startAt, { setZone: true });
@@ -329,10 +337,11 @@ export class BookingsService {
   }
 
   private async assertWithinNoticeWindow(
+    tenantId: string,
     startAt: Date,
     locale: string,
   ): Promise<void> {
-    const settings = await this.settingsService.get();
+    const settings = await this.settingsService.get(tenantId);
     const cutoff = DateTime.now().plus({
       hours: settings.cancellationNoticeHours,
     });
