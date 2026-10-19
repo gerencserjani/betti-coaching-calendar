@@ -11,7 +11,6 @@ import { decrypt, encrypt } from '../common/crypto.util.js';
 import type { AppConfig } from '../config/configuration.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
-const GOOGLE_INTEGRATION_ID = 'singleton';
 // calendar.events for Meet-link creation, userinfo.email so the
 // oauth2.userinfo.get() call below (used to record connectedEmail) is
 // actually authorized -- without it, that call 401s even though the token
@@ -33,6 +32,10 @@ export class GoogleOAuthService {
 
   private newOAuthClient(): OAuth2Client {
     const { google: googleConfig } = this.configService.get<AppConfig>('app')!;
+    // One registered OAuth app (GOOGLE_CLIENT_ID/SECRET) for the whole
+    // platform, shared across every tenant's connection -- this is not
+    // tenant-specific data, same as e.g. a "Sign in with Google" SaaS
+    // using one OAuth app for many end users' own Google accounts.
     return new OAuth2Client(
       googleConfig.clientId,
       googleConfig.clientSecret,
@@ -50,7 +53,7 @@ export class GoogleOAuthService {
     });
   }
 
-  async handleCallback(code: string): Promise<void> {
+  async handleCallback(code: string, tenantId: string): Promise<void> {
     if (!code) {
       throw new BadRequestException('Missing authorization code');
     }
@@ -68,9 +71,9 @@ export class GoogleOAuthService {
 
     const { encryptionKey } = this.configService.get<AppConfig>('app')!;
     await this.prisma.googleIntegration.upsert({
-      where: { id: GOOGLE_INTEGRATION_ID },
+      where: { tenantId },
       create: {
-        id: GOOGLE_INTEGRATION_ID,
+        tenantId,
         refreshTokenEncrypted: encrypt(tokens.refresh_token, encryptionKey),
         connectedEmail: userInfo.email ?? 'unknown',
       },
@@ -81,19 +84,19 @@ export class GoogleOAuthService {
       },
     });
     // Worth its own log line regardless of level: this changes which Google
-    // account every future Meet-link booking is created in.
+    // account every future Meet-link booking for this tenant is created in.
     this.logger.log(
-      `Google Calendar connected: ${userInfo.email ?? 'unknown'}`,
+      `Google Calendar connected for tenant ${tenantId}: ${userInfo.email ?? 'unknown'}`,
     );
   }
 
-  async status(): Promise<{
+  async status(tenantId: string): Promise<{
     connected: boolean;
     connectedEmail?: string;
     connectedAt?: Date;
   }> {
     const integration = await this.prisma.googleIntegration.findUnique({
-      where: { id: GOOGLE_INTEGRATION_ID },
+      where: { tenantId },
     });
     if (!integration) {
       return { connected: false };
@@ -105,9 +108,9 @@ export class GoogleOAuthService {
     };
   }
 
-  async getAuthenticatedClient(): Promise<OAuth2Client> {
+  async getAuthenticatedClient(tenantId: string): Promise<OAuth2Client> {
     const integration = await this.prisma.googleIntegration.findUnique({
-      where: { id: GOOGLE_INTEGRATION_ID },
+      where: { tenantId },
     });
     if (!integration) {
       throw new ServiceUnavailableException(

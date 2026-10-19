@@ -7,6 +7,7 @@ import {
   type Booking,
   type Coach,
   type EventType,
+  type Settings,
 } from '@prisma/client';
 import { SettingsService } from '../settings/settings.service.js';
 import {
@@ -32,26 +33,29 @@ export class NotificationsService {
   ) {}
 
   async notifyBookingConfirmed(booking: BookingWithRelations): Promise<void> {
-    const ctx = await this.buildContext(booking);
+    const settings = await this.settingsService.get(booking.coach.tenantId);
+    const ctx = await this.buildContext(booking, settings);
     await Promise.all([
-      this.sendTo('client', 'confirmed', booking, ctx),
-      this.sendTo('coach', 'confirmed', booking, ctx),
+      this.sendTo('client', 'confirmed', booking, ctx, settings.emailFrom),
+      this.sendTo('coach', 'confirmed', booking, ctx, settings.emailFrom),
     ]);
   }
 
   async notifyBookingCancelled(booking: BookingWithRelations): Promise<void> {
-    const ctx = await this.buildContext(booking);
+    const settings = await this.settingsService.get(booking.coach.tenantId);
+    const ctx = await this.buildContext(booking, settings);
     await Promise.all([
-      this.sendTo('client', 'cancelled', booking, ctx),
-      this.sendTo('coach', 'cancelled', booking, ctx),
+      this.sendTo('client', 'cancelled', booking, ctx, settings.emailFrom),
+      this.sendTo('coach', 'cancelled', booking, ctx, settings.emailFrom),
     ]);
   }
 
   async notifyBookingRescheduled(booking: BookingWithRelations): Promise<void> {
-    const ctx = await this.buildContext(booking);
+    const settings = await this.settingsService.get(booking.coach.tenantId);
+    const ctx = await this.buildContext(booking, settings);
     await Promise.all([
-      this.sendTo('client', 'rescheduled', booking, ctx),
-      this.sendTo('coach', 'rescheduled', booking, ctx),
+      this.sendTo('client', 'rescheduled', booking, ctx, settings.emailFrom),
+      this.sendTo('coach', 'rescheduled', booking, ctx, settings.emailFrom),
     ]);
   }
 
@@ -60,6 +64,7 @@ export class NotificationsService {
     kind: 'confirmed' | 'cancelled' | 'rescheduled',
     booking: BookingWithRelations,
     ctx: BookingEmailContext,
+    emailFrom: string | null,
   ): Promise<void> {
     const locale =
       recipient === 'client' ? booking.locale : booking.coach.preferredLocale;
@@ -92,13 +97,14 @@ export class NotificationsService {
       props,
       icsContent,
       icsFilename: 'booking.ics',
+      from: emailFrom,
     });
   }
 
   private async buildContext(
     booking: BookingWithRelations,
+    settings: Settings,
   ): Promise<BookingEmailContext> {
-    const settings = await this.settingsService.get(booking.coach.tenantId);
     const { frontendUrl } = this.configService.get<AppConfig>('app')!;
 
     return {

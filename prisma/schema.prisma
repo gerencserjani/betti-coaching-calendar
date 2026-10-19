@@ -47,8 +47,9 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  coaches  Coach[]
-  settings Settings?
+  coaches           Coach[]
+  settings          Settings?
+  googleIntegration GoogleIntegration?
 }
 
 model Coach {
@@ -172,13 +173,22 @@ model Settings {
   businessAddress         String   @default("")
   cancellationNoticeHours Int      @default(48)
   businessTimezone        String   @default("Europe/Budapest")
+  /// "Name <address>" sender identity for this tenant's Resend-verified
+  /// domain (see #13). Null means this tenant hasn't verified a domain in
+  /// Resend yet -- EmailService falls back to the shared GMAIL_* sender
+  /// until an admin/owner sets this via PATCH /settings.
+  emailFrom               String?
   updatedAt               DateTime @updatedAt
 }
 
-/// Singleton row (id is always "singleton") holding the one central Google
-/// account used to mint fresh Google Meet links for bookings.
+/// One row per Tenant -- the one Google account that tenant's coaches
+/// share to mint fresh Meet links for bookings (see #2: shared because the
+/// coaches on one tenant already share one calendar, per the cross-coach
+/// availability-conflict rule). 1:1 extension of Tenant, same pattern as
+/// Settings.
 model GoogleIntegration {
-  id                    String   @id @default("singleton")
+  tenantId              String   @id
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   refreshTokenEncrypted String
   connectedEmail        String
   connectedAt           DateTime @default(now())

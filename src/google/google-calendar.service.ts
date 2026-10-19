@@ -24,8 +24,11 @@ export class GoogleCalendarService {
    * Creates a fresh Google Calendar event with a brand-new Meet room every
    * time, so previous clients can never re-enter or linger in an old room.
    */
-  async createMeetEvent(input: CreateMeetEventInput): Promise<MeetEventResult> {
-    const auth = await this.oauthService.getAuthenticatedClient();
+  async createMeetEvent(
+    tenantId: string,
+    input: CreateMeetEventInput,
+  ): Promise<MeetEventResult> {
+    const auth = await this.oauthService.getAuthenticatedClient(tenantId);
     const calendar = createCalendarClient({ version: 'v3', auth });
 
     const { data } = await calendar.events.insert({
@@ -60,8 +63,8 @@ export class GoogleCalendarService {
     return { eventId: data.id, meetLink };
   }
 
-  async deleteEvent(eventId: string): Promise<void> {
-    const auth = await this.oauthService.getAuthenticatedClient();
+  async deleteEvent(tenantId: string, eventId: string): Promise<void> {
+    const auth = await this.oauthService.getAuthenticatedClient(tenantId);
     const calendar = createCalendarClient({ version: 'v3', auth });
     await calendar.events
       .delete({ calendarId: 'primary', eventId, sendUpdates: 'none' })

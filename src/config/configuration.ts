@@ -8,6 +8,8 @@ export interface AppConfig {
     user: string;
     appPassword: string;
   };
+  /** Undefined until RESEND_API_KEY is set -- see EmailService. */
+  resendApiKey?: string;
   google: {
     clientId: string;
     clientSecret: string;
@@ -27,6 +29,7 @@ export default (): { app: AppConfig } => ({
       user: process.env.GMAIL_USER ?? '',
       appPassword: process.env.GMAIL_APP_PASSWORD ?? '',
     },
+    resendApiKey: process.env.RESEND_API_KEY,
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
