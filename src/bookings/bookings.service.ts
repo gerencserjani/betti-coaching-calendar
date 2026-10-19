@@ -237,7 +237,10 @@ export class BookingsService {
 
     if (updated.location === LocationType.GOOGLE_MEET) {
       if (updated.googleEventId) {
-        await this.googleCalendarService.deleteEvent(updated.googleEventId);
+        await this.googleCalendarService.deleteEvent(
+          updated.coach.tenantId,
+          updated.googleEventId,
+        );
         // Clear the now-dangling reference before attempting to create the
         // replacement event, so a failure below can't leave the booking
         // pointing at a Google event that no longer exists.
@@ -266,7 +269,10 @@ export class BookingsService {
     reason: string | undefined,
   ): Promise<BookingWithRelations> {
     if (booking.googleEventId) {
-      await this.googleCalendarService.deleteEvent(booking.googleEventId);
+      await this.googleCalendarService.deleteEvent(
+        booking.coach.tenantId,
+        booking.googleEventId,
+      );
     }
     return this.prisma.booking.update({
       where: { id: booking.id },
@@ -285,13 +291,16 @@ export class BookingsService {
     options: { deleteOnFailure: boolean } = { deleteOnFailure: true },
   ): Promise<BookingWithRelations> {
     try {
-      const meet = await this.googleCalendarService.createMeetEvent({
-        title: `${booking.eventType.title} — ${booking.clientName}`,
-        description: booking.clientNote ?? undefined,
-        startAt: booking.startAt,
-        endAt: booking.endAt,
-        attendeeEmails: [booking.clientEmail, booking.coach.email],
-      });
+      const meet = await this.googleCalendarService.createMeetEvent(
+        booking.coach.tenantId,
+        {
+          title: `${booking.eventType.title} — ${booking.clientName}`,
+          description: booking.clientNote ?? undefined,
+          startAt: booking.startAt,
+          endAt: booking.endAt,
+          attendeeEmails: [booking.clientEmail, booking.coach.email],
+        },
+      );
       return this.prisma.booking.update({
         where: { id: booking.id },
         data: { meetLink: meet.meetLink, googleEventId: meet.eventId },
