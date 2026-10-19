@@ -173,6 +173,11 @@ model Settings {
   businessAddress         String   @default("")
   cancellationNoticeHours Int      @default(48)
   businessTimezone        String   @default("Europe/Budapest")
+  /// "Name <address>" sender identity for this tenant's Resend-verified
+  /// domain (see #13). Null means this tenant hasn't verified a domain in
+  /// Resend yet -- EmailService falls back to the shared GMAIL_* sender
+  /// until an admin/owner sets this via PATCH /settings.
+  emailFrom               String?
   updatedAt               DateTime @updatedAt
 }
 

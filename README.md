@@ -128,11 +128,12 @@ migrate deploy`/`dev`, `prisma studio`) -- DDL isn't reliable through a
   transaction pooler.
 - **`JWT_SECRET`** — signs the app's own login tokens (see "Auth" below).
   32+ random characters; generate with `openssl rand -base64 32`.
-- **`GMAIL_USER` / `GMAIL_APP_PASSWORD`** — email is sent through Gmail's own
-  SMTP, authenticated as a real Gmail account. This is deliberate, not a
-  placeholder: third-party email APIs (Resend, SendGrid, …) can never send
-  _from_ a `@gmail.com` address — only Google's own servers are authorized to
-  (that's what SPF/DKIM enforce) — so sending through Gmail SMTP directly is
+- **`GMAIL_USER` / `GMAIL_APP_PASSWORD` / `EMAIL_FROM`** — the default/
+  fallback sender, used by any tenant that hasn't verified its own domain
+  (see `RESEND_API_KEY` just below). Sent through Gmail's own SMTP,
+  authenticated as a real Gmail account: a third-party email API (Resend,
+  SendGrid, …) can never send _from_ a `@gmail.com` address — only Google's
+  own servers are authorized to (that's what SPF/DKIM enforce) — so this is
   the correct way to have `EMAIL_FROM` genuinely be a Gmail address. Turn on
   2-Step Verification on that Google account, then generate an **App
   Password** (not the account password) at
@@ -140,7 +141,14 @@ migrate deploy`/`dev`, `prisma studio`) -- DDL isn't reliable through a
   `EMAIL_FROM` must be `GMAIL_USER` itself, or a "Send mail as" alias
   configured on that account — Gmail SMTP rejects/rewrites a From address it
   doesn't recognize. Gmail's sending limit is ~500/day on a regular account,
-  far above what this app needs.
+  shared across every tenant still on this fallback.
+- **`RESEND_API_KEY`** — optional. Once set, a tenant can verify its own
+  sending domain at [resend.com](https://resend.com) (free tier: 3,000
+  emails/month, 3 verified domains) and set `Settings.emailFrom` (via
+  `PATCH /settings`) to a `"Name <address>"` at that domain — that tenant's
+  emails then go out through Resend as its own business, instead of the
+  shared Gmail fallback above. See `EmailService` for the per-send
+  Resend-vs-Gmail decision.
 - **`ENCRYPTION_KEY`** — 32-byte, base64-encoded key used to encrypt the
   stored Google refresh token at rest. Generate with `openssl rand -base64 32`
   (a working dev value is already in `.env`, generate a fresh one for

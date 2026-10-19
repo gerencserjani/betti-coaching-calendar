@@ -13,6 +13,7 @@ Single-context glossary and data-model map for this repo (see `docs/agents/domai
 - **Booking** -- a client's appointment against one `EventType`/`Coach`. Scoped by `coachId`.
 - **Settings** -- a `Tenant`'s business profile (address, cancellation-notice window, timezone). One row per tenant.
 - **GoogleIntegration** -- the Google account used to mint Meet links for bookings. One row per `Tenant`, shared by every coach on it -- deliberately tenant-scoped, not coach-scoped, because coaches on one tenant already share one calendar (see the cross-coach availability-conflict rule). The platform's own OAuth app (`GOOGLE_CLIENT_ID`/`SECRET`) stays global, shared across every tenant's connection.
+- **Email sending** -- two mechanisms, chosen per send by `EmailService`: Gmail SMTP (the original mechanism, shared across every tenant that hasn't set up its own) is the default/fallback; Resend is used instead once a tenant verifies its own domain and sets `Settings.emailFrom`. Resend's free tier covers 3 verified domains (3,000 emails/month) -- a paid tier would be needed beyond that.
 
 ## Hierarchy
 
@@ -68,10 +69,12 @@ Tracked as GitHub issues in this repo; update this table as each lands.
 | `Tenant` entity, `Coach.tenantId`, `OWNER` role, cross-coach availability-conflict scoping | ✅ Done    | #11   |
 | Per-tenant `Settings`                                                                      | ✅ Done    | #12   |
 | Per-tenant Google Calendar integration (one shared Google account per tenant)              | ✅ Done    | #2    |
-| Tenant-aware email sending (still one shared Gmail sender)                                 | ⏳ Pending | #13   |
+| Tenant-aware email sending (Gmail fallback + per-tenant Resend once a domain is verified)  | ✅ Done    | #13   |
 | Tenant-aware `FRONTEND_URL`/domain resolution                                              | ⏳ Pending | #14   |
 | Multiple coach-users per tenant beyond ADMIN/OWNER/COACH (future idea)                     | 💭 Idea    | #15   |
 | Guest/client user accounts for booking (future idea)                                       | 💭 Idea    | #16   |
 | Tenant/coach id on queued notification jobs, for log observability                         | ⏳ Pending | #17   |
+
+**Current real-world state:** the one existing tenant hasn't verified a Resend domain yet (`Settings.emailFrom` is null), so it's still sending through the Gmail fallback -- this is expected, not a bug. Once a domain is verified at resend.com and `Settings.emailFrom` is set for that tenant, its emails switch over automatically.
 
 **Known gap until #14 ships:** slots and booking creation/cancel/reschedule already resolve the right tenant correctly (they always carry an `eventTypeId`/`manageToken`, which leads straight to a specific coach and its `tenantId` -- no stopgap needed there). The real gap is the two endpoints with **no** booking/event-type context at all: the public event-types catalog (`EventTypesService.findActive()` returns every tenant's event types mixed together, unfiltered) and `GET /settings` (`SettingsService.getForPublicRequest()` -- an explicit, documented stopgap that returns "whichever tenant exists first"). Both need real domain-based tenant resolution from #14. **Don't onboard a second tenant before #14 ships.**

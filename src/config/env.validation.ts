@@ -55,6 +55,15 @@ class EnvironmentVariables {
   @IsString()
   EMAIL_FROM!: string;
 
+  // Optional: once set, tenants can switch their own sending over to Resend
+  // by setting Settings.emailFrom (see EmailService) -- until then, every
+  // tenant keeps sending through the GMAIL_* fallback above. Not required
+  // at boot because the app must keep working before any domain is
+  // verified in Resend.
+  @IsOptional()
+  @IsString()
+  RESEND_API_KEY?: string;
+
   @IsString()
   GOOGLE_CLIENT_ID!: string;
 

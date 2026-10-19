@@ -21,4 +21,11 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsTimeZone()
   businessTimezone?: string;
+
+  // Set only once this tenant's domain is verified in Resend -- switches
+  // EmailService over from the shared GMAIL_* fallback to Resend for this
+  // tenant. Pass null to revert to the Gmail fallback.
+  @IsOptional()
+  @IsString()
+  emailFrom?: string | null;
 }
