@@ -32,6 +32,7 @@ export class WeeklyAvailabilityService {
     return runSerializable(this.prisma, async (tx) => {
       await this.availabilityService.assertNoCrossCoachConflictForWeekday(
         coach.id,
+        coach.tenantId,
         dto.weekday,
         dto,
         tx,
@@ -57,6 +58,7 @@ export class WeeklyAvailabilityService {
     return runSerializable(this.prisma, async (tx) => {
       await this.availabilityService.assertNoCrossCoachConflictForWeekday(
         coach.id,
+        coach.tenantId,
         weekday,
         { startMinute, endMinute },
         tx,

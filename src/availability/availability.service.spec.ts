@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import type { Coach } from '@prisma/client';
-import { createTestCoach } from '../test/factories.js';
+import { createTestCoach, createTestTenant } from '../test/factories.js';
 import {
   disconnectTestPrisma,
   resetDatabase,
@@ -20,8 +20,17 @@ describe('AvailabilityService (integration)', () => {
 
   beforeEach(async () => {
     await resetDatabase();
-    coachA = await createTestCoach({ email: 'coach-a@example.com' });
-    coachB = await createTestCoach({ email: 'coach-b@example.com' });
+    // Same tenant: assertNoCrossCoachConflict* is specifically about two
+    // coaches sharing one calendar, which only applies within one tenant.
+    const tenant = await createTestTenant();
+    coachA = await createTestCoach({
+      email: 'coach-a@example.com',
+      tenantId: tenant.id,
+    });
+    coachB = await createTestCoach({
+      email: 'coach-b@example.com',
+      tenantId: tenant.id,
+    });
   });
 
   afterAll(async () => {
@@ -113,10 +122,15 @@ describe('AvailabilityService (integration)', () => {
       });
 
       await expect(
-        service.assertNoCrossCoachConflictForWeekday(coachB.id, 1, {
-          startMinute: 720,
-          endMinute: 900,
-        }),
+        service.assertNoCrossCoachConflictForWeekday(
+          coachB.id,
+          coachB.tenantId,
+          1,
+          {
+            startMinute: 720,
+            endMinute: 900,
+          },
+        ),
       ).resolves.toBeUndefined();
     });
 
@@ -131,10 +145,15 @@ describe('AvailabilityService (integration)', () => {
       });
 
       await expect(
-        service.assertNoCrossCoachConflictForWeekday(coachB.id, 1, {
-          startMinute: 600,
-          endMinute: 660,
-        }),
+        service.assertNoCrossCoachConflictForWeekday(
+          coachB.id,
+          coachB.tenantId,
+          1,
+          {
+            startMinute: 600,
+            endMinute: 660,
+          },
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -149,10 +168,15 @@ describe('AvailabilityService (integration)', () => {
       });
 
       await expect(
-        service.assertNoCrossCoachConflictForWeekday(coachA.id, 1, {
-          startMinute: 600,
-          endMinute: 660,
-        }),
+        service.assertNoCrossCoachConflictForWeekday(
+          coachA.id,
+          coachA.tenantId,
+          1,
+          {
+            startMinute: 600,
+            endMinute: 660,
+          },
+        ),
       ).resolves.toBeUndefined();
     });
   });
@@ -169,10 +193,16 @@ describe('AvailabilityService (integration)', () => {
       });
 
       await expect(
-        service.assertNoCrossCoachConflictForDate(coachB.id, '2026-09-21', TZ, {
-          startMinute: 600,
-          endMinute: 660,
-        }),
+        service.assertNoCrossCoachConflictForDate(
+          coachB.id,
+          coachB.tenantId,
+          '2026-09-21',
+          TZ,
+          {
+            startMinute: 600,
+            endMinute: 660,
+          },
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -194,10 +224,16 @@ describe('AvailabilityService (integration)', () => {
       });
 
       await expect(
-        service.assertNoCrossCoachConflictForDate(coachB.id, '2026-09-21', TZ, {
-          startMinute: 600,
-          endMinute: 660,
-        }),
+        service.assertNoCrossCoachConflictForDate(
+          coachB.id,
+          coachB.tenantId,
+          '2026-09-21',
+          TZ,
+          {
+            startMinute: 600,
+            endMinute: 660,
+          },
+        ),
       ).resolves.toBeUndefined();
     });
   });
