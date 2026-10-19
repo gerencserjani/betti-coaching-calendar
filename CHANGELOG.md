@@ -1,3 +1,9 @@
+# [1.10.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.9.0...v1.10.0) (2026-10-19)
+
+### Features
+
+- replace singleton Settings with per-tenant settings ([8b72fc9](https://github.com/gerencserjani/betti-coaching-calendar/commit/8b72fc9c20920aa6348185394dbf127950c3262e)), closes [#14](https://github.com/gerencserjani/betti-coaching-calendar/issues/14) [#2](https://github.com/gerencserjani/betti-coaching-calendar/issues/2) [#13](https://github.com/gerencserjani/betti-coaching-calendar/issues/13) [#14](https://github.com/gerencserjani/betti-coaching-calendar/issues/14) [#12](https://github.com/gerencserjani/betti-coaching-calendar/issues/12)
+
 # [1.9.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.3...v1.9.0) (2026-10-19)
 
 ### Features
