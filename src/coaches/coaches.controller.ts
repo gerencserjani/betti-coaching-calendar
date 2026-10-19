@@ -25,8 +25,8 @@ export class CoachesController {
   constructor(private readonly coachesService: CoachesService) {}
 
   @Get()
-  findAll() {
-    return this.coachesService.findAll();
+  findAll(@CurrentCoach() coach: Coach) {
+    return this.coachesService.findAll(coach);
   }
 
   @Get('me')
@@ -41,9 +41,9 @@ export class CoachesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(CoachRole.ADMIN)
-  create(@Body() dto: CreateCoachDto) {
-    return this.coachesService.create(dto);
+  @Roles(CoachRole.ADMIN, CoachRole.OWNER)
+  create(@CurrentCoach() actor: Coach, @Body() dto: CreateCoachDto) {
+    return this.coachesService.create(actor, dto);
   }
 
   // Forces the target coach to log in again on every device: any access
@@ -52,8 +52,8 @@ export class CoachesController {
   // since tokens are otherwise valid for their full 30-day TTL.
   @Patch(':id/revoke-sessions')
   @UseGuards(RolesGuard)
-  @Roles(CoachRole.ADMIN)
-  revokeSessions(@Param('id') id: string) {
-    return this.coachesService.revokeSessions(id);
+  @Roles(CoachRole.ADMIN, CoachRole.OWNER)
+  revokeSessions(@CurrentCoach() actor: Coach, @Param('id') id: string) {
+    return this.coachesService.revokeSessions(actor, id);
   }
 }

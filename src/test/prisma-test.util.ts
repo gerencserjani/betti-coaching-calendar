@@ -17,6 +17,7 @@ export async function resetDatabase(): Promise<void> {
   await testPrisma.weeklyAvailability.deleteMany();
   await testPrisma.eventType.deleteMany();
   await testPrisma.coach.deleteMany();
+  await testPrisma.tenant.deleteMany();
   await testPrisma.settings.deleteMany();
   await testPrisma.googleIntegration.deleteMany();
 }

@@ -43,6 +43,7 @@ export class AvailabilityOverrideService {
       return runSerializable(this.prisma, async (tx) => {
         await this.availabilityService.assertNoCrossCoachConflictForDate(
           coach.id,
+          coach.tenantId,
           dto.date,
           settings.businessTimezone,
           { startMinute: dto.startMinute!, endMinute: dto.endMinute! },
@@ -101,6 +102,7 @@ export class AvailabilityOverrideService {
       return runSerializable(this.prisma, async (tx) => {
         await this.availabilityService.assertNoCrossCoachConflictForDate(
           coach.id,
+          coach.tenantId,
           isoDate,
           settings.businessTimezone,
           { startMinute, endMinute },

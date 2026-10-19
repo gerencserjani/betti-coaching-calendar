@@ -26,16 +26,41 @@ enum CancelledBy {
 }
 
 enum CoachRole {
+  /// Cross-tenant "super admin" -- sees/manages every tenant's data.
   ADMIN
+  /// Tenant-scoped manager: same account-management rights as ADMIN (create
+  /// a coach, revoke a coach's sessions, ...) but limited to COACH-role
+  /// coaches within their own tenant, and never another coach's calendar/
+  /// event types/settings -- an OWNER is also themselves a bookable COACH.
+  OWNER
   COACH
+}
+
+/// One independent coaching business. Every Coach belongs to exactly one
+/// Tenant; an ADMIN-role Coach's own tenantId is otherwise unused for
+/// authorization, since ADMIN is a cross-tenant role (see CoachRole) -- it
+/// exists so the column can stay NOT NULL rather than needing a nullable
+/// "platform-level" special case.
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coaches Coach[]
 }
 
 model Coach {
   id              String    @id @default(cuid())
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId        String
   email           String    @unique
   passwordHash    String
   name            String
   preferredLocale String    @default("hu")
+  /// ADMIN is a cross-tenant "super admin" role -- it must see/manage every
+  /// tenant's data, not just its own tenantId's (see auth/roles.guard.ts and
+  /// every tenant-scoped query, which special-cases this role as a bypass).
   role            CoachRole @default(COACH)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -49,6 +74,8 @@ model Coach {
   weeklyAvailabilities WeeklyAvailability[]
   overrides            AvailabilityOverride[]
   bookings             Booking[]
+
+  @@index([tenantId])
 }
 
 model EventType {

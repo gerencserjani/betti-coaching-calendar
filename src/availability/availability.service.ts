@@ -151,16 +151,22 @@ export class AvailabilityService {
    * `isoDate`. Pass `client` when called from inside a SERIALIZABLE
    * transaction that also performs the write this check is gating, so the
    * read and the write are isolated against a concurrent equivalent request.
+   *
+   * "Other coach" means another coach on the same shared calendar -- i.e.
+   * the same tenant. Without the tenantId filter, this would incorrectly
+   * check a candidate slot against every coach in the database, including
+   * ones belonging to an entirely different, unrelated business.
    */
   async assertNoCrossCoachConflictForDate(
     coachId: string,
+    tenantId: string,
     isoDate: string,
     timezone: string,
     candidate: MinuteRange,
     client: DbClient = this.prisma,
   ): Promise<void> {
     const otherCoaches = await client.coach.findMany({
-      where: { id: { not: coachId } },
+      where: { id: { not: coachId }, tenantId },
       select: { id: true, name: true },
     });
 
@@ -182,16 +188,22 @@ export class AvailabilityService {
   /**
    * Throws if `candidate` overlaps any OTHER coach's recurring weekly
    * schedule for the same weekday. See assertNoCrossCoachConflictForDate
-   * above for why `client` matters.
+   * above for why `client` matters, and for why `tenantId` must scope
+   * "other coach" to the same shared calendar.
    */
   async assertNoCrossCoachConflictForWeekday(
     coachId: string,
+    tenantId: string,
     weekday: number,
     candidate: MinuteRange,
     client: DbClient = this.prisma,
   ): Promise<void> {
     const otherCoachesWeekly = await client.weeklyAvailability.findMany({
-      where: { coachId: { not: coachId }, weekday },
+      where: {
+        coachId: { not: coachId },
+        weekday,
+        coach: { tenantId },
+      },
       include: { coach: { select: { name: true } } },
     });
 
