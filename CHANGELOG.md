@@ -1,3 +1,9 @@
+# [1.9.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.3...v1.9.0) (2026-10-19)
+
+### Features
+
+- introduce Tenant entity as the multi-tenant foundation ([da4ee0e](https://github.com/gerencserjani/betti-coaching-calendar/commit/da4ee0eedda19e250dc3fbb31e0a9be41c0d2637)), closes [#11](https://github.com/gerencserjani/betti-coaching-calendar/issues/11) [#12](https://github.com/gerencserjani/betti-coaching-calendar/issues/12) [#13](https://github.com/gerencserjani/betti-coaching-calendar/issues/13) [#14](https://github.com/gerencserjani/betti-coaching-calendar/issues/14) [#15](https://github.com/gerencserjani/betti-coaching-calendar/issues/15) [#16](https://github.com/gerencserjani/betti-coaching-calendar/issues/16) [#17](https://github.com/gerencserjani/betti-coaching-calendar/issues/17)
+
 ## [1.8.3](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.2...v1.8.3) (2026-10-14)
 
 ### Performance Improvements
