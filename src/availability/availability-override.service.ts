@@ -39,7 +39,7 @@ export class AvailabilityOverrideService {
         throw new BadRequestException('startMinute must be before endMinute');
       }
 
-      const settings = await this.settingsService.get();
+      const settings = await this.settingsService.get(coach.tenantId);
       return runSerializable(this.prisma, async (tx) => {
         await this.availabilityService.assertNoCrossCoachConflictForDate(
           coach.id,
@@ -98,7 +98,7 @@ export class AvailabilityOverrideService {
         throw new BadRequestException('startMinute must be before endMinute');
       }
 
-      const settings = await this.settingsService.get();
+      const settings = await this.settingsService.get(coach.tenantId);
       return runSerializable(this.prisma, async (tx) => {
         await this.availabilityService.assertNoCrossCoachConflictForDate(
           coach.id,

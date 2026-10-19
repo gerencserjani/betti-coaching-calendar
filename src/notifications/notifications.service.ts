@@ -98,7 +98,7 @@ export class NotificationsService {
   private async buildContext(
     booking: BookingWithRelations,
   ): Promise<BookingEmailContext> {
-    const settings = await this.settingsService.get();
+    const settings = await this.settingsService.get(booking.coach.tenantId);
     const { frontendUrl } = this.configService.get<AppConfig>('app')!;
 
     return {
