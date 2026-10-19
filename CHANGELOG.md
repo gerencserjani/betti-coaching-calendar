@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.10.0...v1.11.0) (2026-10-19)
+
+### Features
+
+- make Google Calendar/Meet integration tenant-scoped ([0cca9b9](https://github.com/gerencserjani/betti-coaching-calendar/commit/0cca9b95050d43a6a701735e06f773c9b601d7eb)), closes [#2](https://github.com/gerencserjani/betti-coaching-calendar/issues/2)
+- tenant-aware email sending via Resend, with a Gmail fallback ([85bd4be](https://github.com/gerencserjani/betti-coaching-calendar/commit/85bd4be846be2348f4ef7129342f13586fcf18a0)), closes [#13](https://github.com/gerencserjani/betti-coaching-calendar/issues/13)
+
 # [1.10.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.9.0...v1.10.0) (2026-10-19)
 
 ### Features
