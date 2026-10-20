@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { assertCoachOwnsOrIsAdmin } from '../common/ownership.util.js';
@@ -11,6 +12,8 @@ import type { UpdateEventTypeDto } from './dto/update-event-type.dto.js';
 
 @Injectable()
 export class EventTypesService {
+  private readonly logger = new Logger(EventTypesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /** Public catalog: every active event type for one coach, for the client-facing booking UI. */
@@ -30,9 +33,13 @@ export class EventTypesService {
 
   async create(coach: Coach, dto: CreateEventTypeDto): Promise<EventType> {
     const position = dto.position ?? (await this.nextPosition(coach.id));
-    return this.prisma.eventType.create({
+    const eventType = await this.prisma.eventType.create({
       data: { ...dto, position, coachId: coach.id },
     });
+    this.logger.log(
+      `Created event type ${eventType.id} (${eventType.title}) for coach ${coach.id}`,
+    );
+    return eventType;
   }
 
   /** Appends new event types to the end of this coach's own display order by default. */
@@ -50,19 +57,27 @@ export class EventTypesService {
     dto: UpdateEventTypeDto,
   ): Promise<EventType> {
     const eventType = await this.assertOwnership(coach, eventTypeId);
-    return this.prisma.eventType.update({
+    const updated = await this.prisma.eventType.update({
       where: { id: eventType.id },
       data: dto,
     });
+    this.logger.log(
+      `Updated event type ${eventType.id} for coach ${eventType.coachId} (by ${coach.role} ${coach.id})`,
+    );
+    return updated;
   }
 
   /** Archives instead of deleting, so past bookings keep a valid EventType to reference. */
   async archive(coach: Coach, eventTypeId: string): Promise<EventType> {
     const eventType = await this.assertOwnership(coach, eventTypeId);
-    return this.prisma.eventType.update({
+    const archived = await this.prisma.eventType.update({
       where: { id: eventType.id },
       data: { isActive: false },
     });
+    this.logger.log(
+      `Archived event type ${eventType.id} for coach ${eventType.coachId} (by ${coach.role} ${coach.id})`,
+    );
+    return archived;
   }
 
   /**
@@ -75,6 +90,9 @@ export class EventTypesService {
     const eventType = await this.assertOwnership(coach, eventTypeId);
     try {
       await this.prisma.eventType.delete({ where: { id: eventType.id } });
+      this.logger.log(
+        `Permanently deleted event type ${eventType.id} for coach ${eventType.coachId} (by ${coach.role} ${coach.id})`,
+      );
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -110,6 +128,9 @@ export class EventTypesService {
           data: { position: index },
         }),
       ),
+    );
+    this.logger.log(
+      `Reordered ${ids.length} event type(s) for coach ${coach.id}`,
     );
   }
 

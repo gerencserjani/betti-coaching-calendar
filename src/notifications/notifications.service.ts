@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration.js';
 import {
@@ -25,6 +25,8 @@ export type BookingWithRelations = Booking & {
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly emailService: EmailService,
     private readonly contentBuilder: EmailContentBuilder,
@@ -91,14 +93,27 @@ export class NotificationsService {
             attendee: { name: booking.clientName, email: booking.clientEmail },
           });
 
-    await this.emailService.send({
-      to,
-      subject,
-      props,
-      icsContent,
-      icsFilename: 'booking.ics',
-      from: emailFrom,
-    });
+    try {
+      await this.emailService.send({
+        to,
+        subject,
+        props,
+        icsContent,
+        icsFilename: 'booking.ics',
+        from: emailFrom,
+      });
+      this.logger.log(
+        `Sent ${kind} email to ${recipient} for booking ${booking.id} (coach ${booking.coachId})`,
+      );
+    } catch (error) {
+      // Rethrown as-is -- the caller (NotificationJobsService) already logs
+      // and retries the job -- this just records *which* recipient failed,
+      // since a Promise.all rejection alone doesn't say.
+      this.logger.error(
+        `Failed to send ${kind} email to ${recipient} for booking ${booking.id} (coach ${booking.coachId})`,
+      );
+      throw error;
+    }
   }
 
   private async buildContext(

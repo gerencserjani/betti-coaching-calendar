@@ -155,6 +155,9 @@ export class BookingsService {
       'confirmed',
     );
 
+    this.logger.log(
+      `Created booking ${booking.id} for coach ${booking.coachId} (event type ${booking.eventTypeId})`,
+    );
     return booking;
   }
 
@@ -179,6 +182,9 @@ export class BookingsService {
       updated.id,
       updated.coachId,
       'cancelled',
+    );
+    this.logger.log(
+      `Cancelled booking ${updated.id} for coach ${updated.coachId} (by CLIENT)`,
     );
     return updated;
   }
@@ -208,6 +214,9 @@ export class BookingsService {
       updated.id,
       updated.coachId,
       'cancelled',
+    );
+    this.logger.log(
+      `Cancelled booking ${updated.id} for coach ${updated.coachId} (by ${coach.role} ${coach.id})`,
     );
     return updated;
   }
@@ -290,6 +299,9 @@ export class BookingsService {
       'rescheduled',
     );
 
+    this.logger.log(
+      `Rescheduled booking ${updated.id} for coach ${updated.coachId}`,
+    );
     return updated;
   }
 
