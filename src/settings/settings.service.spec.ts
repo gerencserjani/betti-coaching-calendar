@@ -1,4 +1,4 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import { createTestCoach } from '../test/factories.js';
 import {
@@ -68,17 +68,9 @@ describe('SettingsService (integration)', () => {
     expect((await service.get(coachB.id)).cancellationNoticeHours).toBe(20);
   });
 
-  describe('getForPublicRequest', () => {
-    it('returns the first (and, today, only) coach', async () => {
-      const coach = await createTestCoach();
-      const settings = await service.getForPublicRequest();
-      expect(settings.coachId).toBe(coach.id);
-    });
-
-    it('throws when no coach exists at all', async () => {
-      await expect(service.getForPublicRequest()).rejects.toThrow(
-        ServiceUnavailableException,
-      );
-    });
+  it('throws NotFoundException for a coachId that does not exist', async () => {
+    await expect(service.get('no-such-coach')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });

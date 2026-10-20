@@ -31,7 +31,7 @@ describe('EventTypesService (integration)', () => {
   });
 
   describe('create', () => {
-    it('defaults price to 0 and appends position to the end of the shared catalog', async () => {
+    it("defaults price to 0 and appends position to the end of the coach's own catalog", async () => {
       const first = await service.create(coachA, {
         title: 'First',
         durationMinutes: 30,
@@ -40,12 +40,27 @@ describe('EventTypesService (integration)', () => {
       expect(first.price).toBe(0);
       expect(first.position).toBe(0);
 
-      const second = await service.create(coachB, {
+      const second = await service.create(coachA, {
         title: 'Second',
         durationMinutes: 45,
         locations: [LocationType.IN_PERSON],
       });
       expect(second.position).toBe(1);
+    });
+
+    it("doesn't let another coach's catalog affect this coach's starting position", async () => {
+      await service.create(coachB, {
+        title: "B's event type",
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+      });
+
+      const first = await service.create(coachA, {
+        title: "A's first event type",
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+      });
+      expect(first.position).toBe(0);
     });
 
     it('respects an explicitly provided position instead of auto-appending', async () => {
@@ -60,18 +75,22 @@ describe('EventTypesService (integration)', () => {
   });
 
   describe('findActive / findMine', () => {
-    it('findActive only returns active event types, ordered by position then title', async () => {
+    it("findActive only returns the given coach's own active event types, ordered by position then title", async () => {
       await createTestEventType(coachA.id, { title: 'Zzz', isActive: true });
       await createTestEventType(coachA.id, { title: 'Aaa', isActive: true });
       await createTestEventType(coachA.id, {
         title: 'Archived',
         isActive: false,
       });
+      await createTestEventType(coachB.id, {
+        title: 'Not this coach',
+        isActive: true,
+      });
 
       // The factory doesn't auto-increment position (it writes straight to
       // Prisma, bypassing the service), so both share the schema default of
       // 0 - the tiebreak is then alphabetical by title.
-      const active = await service.findActive();
+      const active = await service.findActive(coachA.id);
       expect(active).toHaveLength(2);
       expect(active.map((e) => e.title)).toEqual(['Aaa', 'Zzz']);
     });

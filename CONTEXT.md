@@ -18,6 +18,7 @@ This used to be modeled as two tables (`Tenant` + `Coach`, 1:1), introduced whil
 - **Settings** -- a `Coach`'s business profile (address, cancellation-notice window, timezone). One row per coach.
 - **GoogleIntegration** -- the Google account used to mint Meet links for a `Coach`'s bookings. One row per coach. The platform's own OAuth app (`GOOGLE_CLIENT_ID`/`SECRET`) stays global, shared across every coach's own connection -- same pattern as e.g. a "Sign in with Google" SaaS using one OAuth app for many end users' own Google accounts.
 - **Email sending** -- two mechanisms, chosen per send by `EmailService`: Gmail SMTP (the original mechanism, shared across every coach that hasn't set up their own) is the default/fallback; Resend is used instead once a coach verifies their own domain and sets `Settings.emailFrom`. Resend's free tier covers 3 verified domains (3,000 emails/month) -- a paid tier would be needed beyond that.
+- **Public request resolution** -- there's no domain/subdomain-based routing: the two public, unauthenticated endpoints with no other coach context (`GET /event-types`, `GET /settings`) take an explicit, required `?coachId=` query param instead. Each frontend deployment is configured with its own `VITE_COACH_ID` and sends it on every public call -- "one backend serves many independent frontends", each one naming itself explicitly rather than being inferred from its hostname. `POST /bookings`, `GET /slots`, etc. never needed this: they always carry an `eventTypeId`/`manageToken` that already leads to a specific coach.
 
 ## Hierarchy
 
