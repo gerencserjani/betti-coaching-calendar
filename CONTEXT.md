@@ -1,4 +1,4 @@
-# Domain context: betti-coaching-calendar
+# Domain context: coach-calendar
 
 Single-context glossary and data-model map for this repo (see `docs/agents/domain.md` for how agent skills consume this file). Kept up to date as the data model evolves -- this is the one place to look to see the current shape of the hierarchy.
 
@@ -73,4 +73,4 @@ erDiagram
 
 **Current real-world state:** the one existing coach hasn't verified a Resend domain yet (`Settings.emailFrom` is null), so it's still sending through the Gmail fallback -- this is expected, not a bug. Once a domain is verified at resend.com and `Settings.emailFrom` is set, email switches over automatically.
 
-**Deploy status:** #14 and #17 are merged to `main` in both repos but **not yet deployed**. The frontend (betti-coaching) auto-deploys to Vercel on merge regardless -- safe, since the still-live production backend has no validation on the new `?coachId=` query param and simply ignores it. The backend itself (betti-coaching-calendar) is deployed to Cloud Run only when explicitly requested; until then, production keeps running the pre-#14/#17 code. A second coach/website still shouldn't go live before the backend deploy actually happens.
+**Deploy status:** #14 and #17 are merged to `main` in both repos but **not yet deployed**. The frontend (betti-coaching) auto-deploys to Vercel on merge regardless -- safe, since the still-live production backend has no validation on the new `?coachId=` query param and simply ignores it. The backend itself (this repo, `coach-calendar` -- still deployed as the `betti-coaching-calendar` Cloud Run service, not yet renamed) is deployed to Cloud Run only when explicitly requested; until then, production keeps running the pre-#14/#17 code. A second coach/website still shouldn't go live before the backend deploy actually happens.
