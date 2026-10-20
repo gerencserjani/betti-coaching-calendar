@@ -1,6 +1,9 @@
-# betti-coaching-calendar
+# coach-calendar
 
-Booking/calendar backend API for the [betti-coaching](https://github.com/gerencserjani/betti-coaching) website — a [NestJS](https://nestjs.com) project.
+Booking/calendar backend API: coach accounts, event types, availability, and
+bookings, shared by any number of independent coach websites — a
+[NestJS](https://nestjs.com) project. Currently used by
+[betti-coaching](https://github.com/gerencserjani/betti-coaching).
 
 A single shared booking calendar: coaches each manage their own event types and
 weekly availability, clients book without an account, and the whole thing is

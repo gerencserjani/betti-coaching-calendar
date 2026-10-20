@@ -1,7 +1,7 @@
 {
-  "name": "betti-coaching-calendar",
+  "name": "coach-calendar",
   "version": "1.13.0",
-  "description": "Booking/calendar backend API for the betti-coaching website.",
+  "description": "Booking/calendar backend API: coach accounts, event types, availability, and bookings, shared by any number of independent coach websites.",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
