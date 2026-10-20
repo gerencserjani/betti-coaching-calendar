@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -14,6 +15,7 @@ import { CurrentCoach } from '../auth/current-coach.decorator.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import type { Coach } from '@prisma/client';
 import { OptionalCoachIdQueryDto } from '../common/dto/optional-coach-id-query.dto.js';
+import { resolveRequestOrigin } from '../common/origin.util.js';
 import { BookingsService } from './bookings.service.js';
 import {
   ClientCancelBookingDto,
@@ -42,8 +44,15 @@ export class BookingsController {
   // it's a more expensive/abusable action than a plain read.
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post()
-  create(@Body() dto: CreateBookingDto) {
-    return this.bookingsService.create(dto);
+  create(
+    @Body() dto: CreateBookingDto,
+    @Headers('origin') origin?: string,
+    @Headers('referer') referer?: string,
+  ) {
+    return this.bookingsService.create(
+      dto,
+      resolveRequestOrigin(origin, referer),
+    );
   }
 
   // Public: reached via the random manageToken emailed to the client, no login.

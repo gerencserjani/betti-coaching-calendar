@@ -1,5 +1,4 @@
 import { jest } from '@jest/globals';
-import type { ConfigService } from '@nestjs/config';
 import { LocationType, type Coach, type EventType } from '@prisma/client';
 import { I18nService } from '../i18n/i18n.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
@@ -16,12 +15,6 @@ import {
   NotificationsService,
   type BookingWithRelations,
 } from './notifications.service.js';
-
-function fakeConfigService(): ConfigService {
-  return {
-    get: () => ({ frontendUrl: 'https://example.com' }),
-  } as unknown as ConfigService;
-}
 
 function fakeEmailService(): jest.Mocked<EmailService> {
   return {
@@ -61,7 +54,6 @@ describe('NotificationsService (integration)', () => {
       emailService,
       contentBuilder,
       settingsService,
-      fakeConfigService(),
     );
   });
 
@@ -72,6 +64,7 @@ describe('NotificationsService (integration)', () => {
 
   async function createBooking(
     location: LocationType,
+    originUrl: string | null = 'https://betti-coaching.vercel.app',
   ): Promise<BookingWithRelations> {
     return testPrisma.booking.create({
       data: {
@@ -83,7 +76,8 @@ describe('NotificationsService (integration)', () => {
         clientName: 'Teszt Elek',
         clientEmail: 'client@example.com',
         clientPhone: '+36301234567',
-        manageToken: `notify-token-${location}`,
+        manageToken: `notify-token-${location}-${originUrl ?? 'null'}`,
+        originUrl,
         ...(location === LocationType.GOOGLE_MEET
           ? {
               meetLink: 'https://meet.google.com/abc-defg-hij',
@@ -140,5 +134,26 @@ describe('NotificationsService (integration)', () => {
 
     expect(clientCalendarUrlLocation()).toBe('Telefon');
     expect(icsLocationLine()).toBe('LOCATION:Telefon');
+  });
+
+  it("builds the logo/manage links from this booking's own originUrl, not a site-wide setting", async () => {
+    const booking = await createBooking(
+      LocationType.PHONE,
+      'https://peti-coaching.vercel.app',
+    );
+    await service.notifyBookingConfirmed(booking);
+
+    expect(clientEmailInput().props.logoUrl).toBe(
+      'https://peti-coaching.vercel.app/email-logo.png',
+    );
+  });
+
+  it('still builds an email (with a degraded link) when a booking has no originUrl', async () => {
+    const booking = await createBooking(LocationType.PHONE, null);
+
+    await expect(
+      service.notifyBookingConfirmed(booking),
+    ).resolves.toBeUndefined();
+    expect(clientEmailInput().props.logoUrl).toBe('/email-logo.png');
   });
 });

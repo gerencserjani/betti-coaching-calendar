@@ -1,6 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import type { AppConfig } from '../config/configuration.js';
 import {
   CancelledBy,
   LocationType,
@@ -31,7 +29,6 @@ export class NotificationsService {
     private readonly emailService: EmailService,
     private readonly contentBuilder: EmailContentBuilder,
     private readonly settingsService: SettingsService,
-    private readonly configService: ConfigService,
   ) {}
 
   async notifyBookingConfirmed(booking: BookingWithRelations): Promise<void> {
@@ -120,7 +117,16 @@ export class NotificationsService {
     booking: BookingWithRelations,
     settings: Settings,
   ): Promise<BookingEmailContext> {
-    const { frontendUrl } = this.configService.get<AppConfig>('app')!;
+    const frontendUrl = booking.originUrl;
+    if (!frontendUrl) {
+      // Only possible for a booking created by a non-browser caller (no
+      // Origin/Referer header) -- real client traffic always goes through
+      // the booking wizard, which always sends one. Still build the email
+      // rather than fail the job outright; the links just won't resolve.
+      this.logger.warn(
+        `Booking ${booking.id} (coach ${booking.coachId}) has no originUrl -- email links will be malformed`,
+      );
+    }
 
     return {
       eventTypeTitle: booking.eventType.title,
@@ -134,14 +140,14 @@ export class NotificationsService {
       meetLink: booking.meetLink ?? undefined,
       clientPhone: booking.clientPhone,
       timezone: settings.businessTimezone,
-      logoUrl: `${frontendUrl}/email-logo.png`,
+      logoUrl: `${frontendUrl ?? ''}/email-logo.png`,
       // The frontend has no /bookings/manage route -- the manage UI lives
       // inline in the booking section on the homepage, reading a `manage`
       // query param (see Booking.tsx). No hash here: the content builder
       // appends an `action` query param plus the #idopontfoglalas hash
       // (which must come after all query params, or it'd be swallowed
       // into the fragment instead of the query string).
-      manageUrl: `${frontendUrl}/?manage=${booking.manageToken}`,
+      manageUrl: `${frontendUrl ?? ''}/?manage=${booking.manageToken}`,
       googleCalendarUrl: buildGoogleCalendarQuickAddUrl({
         title: booking.eventType.title,
         description: booking.clientNote ?? undefined,

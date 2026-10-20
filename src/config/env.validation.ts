@@ -38,9 +38,6 @@ class EnvironmentVariables {
   @IsString()
   BUSINESS_TIMEZONE!: string;
 
-  @IsUrl({ require_tld: false })
-  FRONTEND_URL!: string;
-
   @IsString()
   @MinLength(32)
   JWT_SECRET!: string;

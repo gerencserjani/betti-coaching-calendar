@@ -139,6 +139,14 @@ model Booking {
   manageToken        String        @unique
   googleEventId      String?
   meetLink           String?
+  /// The coach's own frontend origin this booking was made through (from
+  /// the creating request's Origin/Referer header -- see BookingsService.
+  /// create()). Used to build this booking's own email links (manage URL,
+  /// logo) so they point at the right coach's site, instead of a single
+  /// global FRONTEND_URL that can only ever be correct for one coach. Null
+  /// only for bookings predating this column or the rare non-browser
+  /// caller with neither header.
+  originUrl          String?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 

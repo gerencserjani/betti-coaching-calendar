@@ -1,4 +1,4 @@
-import { isLocalhostOrigin } from './origin.util.js';
+import { isLocalhostOrigin, resolveRequestOrigin } from './origin.util.js';
 
 describe('isLocalhostOrigin', () => {
   it('allows http://localhost with any port', () => {
@@ -29,5 +29,33 @@ describe('isLocalhostOrigin', () => {
 
   it('returns false for a malformed origin instead of throwing', () => {
     expect(isLocalhostOrigin('not-a-url')).toBe(false);
+  });
+});
+
+describe('resolveRequestOrigin', () => {
+  it('prefers the Origin header when present', () => {
+    expect(
+      resolveRequestOrigin(
+        'https://betti-coaching.vercel.app',
+        'https://betti-coaching.vercel.app/booking?foo=bar',
+      ),
+    ).toBe('https://betti-coaching.vercel.app');
+  });
+
+  it('derives the origin from Referer when Origin is missing', () => {
+    expect(
+      resolveRequestOrigin(
+        undefined,
+        'https://betti-coaching.vercel.app/booking?foo=bar',
+      ),
+    ).toBe('https://betti-coaching.vercel.app');
+  });
+
+  it('returns null when both headers are missing', () => {
+    expect(resolveRequestOrigin(undefined, undefined)).toBeNull();
+  });
+
+  it('returns null for a malformed Referer instead of throwing', () => {
+    expect(resolveRequestOrigin(undefined, 'not-a-url')).toBeNull();
   });
 });
