@@ -133,6 +133,7 @@ describe('BookingsService (integration)', () => {
       expect(booking.manageToken).toBeTruthy();
       expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
         booking.id,
+        coach.id,
         'confirmed',
       );
     });
@@ -260,6 +261,7 @@ describe('BookingsService (integration)', () => {
       expect(cancelled.cancelledBy).toBe('CLIENT');
       expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
         booking.id,
+        coach.id,
         'cancelled',
       );
     });
@@ -367,6 +369,7 @@ describe('BookingsService (integration)', () => {
       );
       expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
         booking.id,
+        coach.id,
         'rescheduled',
       );
     });

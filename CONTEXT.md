@@ -66,11 +66,11 @@ erDiagram
 | Per-coach Settings                                                                      | ✅ Done     | #12   |
 | Per-coach Google Calendar integration                                                   | ✅ Done     | #2    |
 | Coach-aware email sending (Gmail fallback + per-coach Resend once a domain is verified) | ✅ Done     | #13   |
-| Domain-based resolution for the public, unauthenticated endpoints                       | ⏳ Pending  | #14   |
+| coachId-based resolution for the public, unauthenticated endpoints                      | ✅ Done     | #14   |
 | Multiple coaches sharing one business account                                           | ❌ Rejected | #15   |
 | Guest/client user accounts for booking (future idea)                                    | 💭 Idea     | #16   |
-| Coach id on queued notification jobs, for log observability                             | ⏳ Pending  | #17   |
+| Coach id on queued notification jobs, for log observability                             | ✅ Done     | #17   |
 
 **Current real-world state:** the one existing coach hasn't verified a Resend domain yet (`Settings.emailFrom` is null), so it's still sending through the Gmail fallback -- this is expected, not a bug. Once a domain is verified at resend.com and `Settings.emailFrom` is set, email switches over automatically.
 
-**Known gap until #14 ships:** slots and booking creation/cancel/reschedule already resolve the right coach correctly (they always carry an `eventTypeId`/`manageToken`, which leads straight to a specific coach). The real gap is the two endpoints with **no** booking/event-type context at all: the public event-types catalog (`EventTypesService.findActive()`) and `GET /settings` (`SettingsService.getForPublicRequest()` -- an explicit, documented stopgap that returns "whichever coach was created first", correct only as long as there's exactly one website live). Both need real domain-based resolution from #14 before a second website goes live on this backend.
+**Deploy status:** #14 and #17 are merged to `main` in both repos but **not yet deployed**. The frontend (betti-coaching) auto-deploys to Vercel on merge regardless -- safe, since the still-live production backend has no validation on the new `?coachId=` query param and simply ignores it. The backend itself (betti-coaching-calendar) is deployed to Cloud Run only when explicitly requested; until then, production keeps running the pre-#14/#17 code. A second coach/website still shouldn't go live before the backend deploy actually happens.
