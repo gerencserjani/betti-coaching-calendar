@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { CoachRole, type Coach } from '@prisma/client';
 import { PasswordService } from '../auth/password.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -7,6 +7,8 @@ import type { UpdateCoachDto } from './dto/update-coach.dto.js';
 
 @Injectable()
 export class CoachesService {
+  private readonly logger = new Logger(CoachesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
@@ -30,7 +32,7 @@ export class CoachesService {
       throw new ConflictException('A coach with that email already exists');
     }
     const passwordHash = await this.passwordService.hash(dto.password);
-    return this.prisma.coach.create({
+    const coach = await this.prisma.coach.create({
       data: {
         email: dto.email,
         name: dto.name,
@@ -38,13 +40,17 @@ export class CoachesService {
         role: CoachRole.COACH,
       },
     });
+    this.logger.log(`Created coach ${coach.id} (${coach.email})`);
+    return coach;
   }
 
   /** ADMIN-only. */
-  revokeSessions(coachId: string): Promise<Coach> {
-    return this.prisma.coach.update({
+  async revokeSessions(coachId: string): Promise<Coach> {
+    const coach = await this.prisma.coach.update({
       where: { id: coachId },
       data: { sessionsRevokedAt: new Date() },
     });
+    this.logger.warn(`Revoked all sessions for coach ${coachId}`);
+    return coach;
   }
 }
