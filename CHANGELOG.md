@@ -1,3 +1,9 @@
+# [1.12.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.11.0...v1.12.0) (2026-10-20)
+
+### Features
+
+- coachId-based resolution for the public, unauthenticated endpoints ([c8f47a0](https://github.com/gerencserjani/betti-coaching-calendar/commit/c8f47a0d9381956da803db05b8d272170fd6b358))
+
 # [1.11.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.10.0...v1.11.0) (2026-10-19)
 
 ### Features
