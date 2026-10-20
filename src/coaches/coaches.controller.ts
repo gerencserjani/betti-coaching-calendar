@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -14,6 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { CoachesService } from './coaches.service.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { CreateCoachDto } from './dto/create-coach.dto.js';
 import { UpdateCoachDto } from './dto/update-coach.dto.js';
 
@@ -39,6 +41,12 @@ export class CoachesController {
   @Patch('me')
   updateMe(@CurrentCoach() coach: Coach, @Body() dto: UpdateCoachDto) {
     return this.coachesService.update(coach.id, dto);
+  }
+
+  @Patch('me/password')
+  @HttpCode(204)
+  changePassword(@CurrentCoach() coach: Coach, @Body() dto: ChangePasswordDto) {
+    return this.coachesService.changePassword(coach, dto);
   }
 
   @Post()
