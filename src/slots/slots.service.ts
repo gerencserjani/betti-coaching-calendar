@@ -38,7 +38,7 @@ export class SlotsService {
       );
     }
 
-    const settings = await this.settingsService.get();
+    const settings = await this.settingsService.get(eventType.coachId);
     const timezone = settings.businessTimezone;
 
     const from = DateTime.fromISO(query.from, { zone: timezone }).startOf(

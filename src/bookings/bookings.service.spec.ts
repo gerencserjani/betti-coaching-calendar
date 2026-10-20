@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { jest } from '@jest/globals';
+import { DateTime } from 'luxon';
 import {
   CoachRole,
   LocationType,
@@ -61,7 +62,22 @@ describe('BookingsService (integration)', () => {
   let coach: Coach;
   let eventType: EventType;
 
-  const FUTURE_DAY = '2026-10-01'; // Thursday, well within CEST (before Oct 25 DST switch)
+  // Comfortably in the future (10 days clears the default 48h
+  // cancellationNoticeHours with margin), computed at test-run time rather
+  // than hardcoded -- a fixed calendar date like the old '2026-10-01'
+  // literal silently goes stale once real time catches up to it, since
+  // `create()` rejects any startAt in the past. The UTC offset for
+  // `futureAt()` below is resolved from the Europe/Budapest zone via luxon,
+  // not hardcoded, so this keeps working whether the computed date lands
+  // in CEST or CET.
+  const FUTURE_DAY = DateTime.now()
+    .setZone('Europe/Budapest')
+    .plus({ days: 10 })
+    .startOf('day');
+
+  function futureAt(hour: number, minute = 0): DateTime {
+    return FUTURE_DAY.set({ hour, minute, second: 0, millisecond: 0 });
+  }
 
   beforeAll(async () => {
     await i18nService.onModuleInit();
@@ -98,7 +114,7 @@ describe('BookingsService (integration)', () => {
   ) {
     return {
       eventTypeId: eventType.id,
-      startAt: `${FUTURE_DAY}T10:00:00+02:00`,
+      startAt: futureAt(10).toISO()!,
       location: LocationType.PHONE,
       clientName: 'Test Client',
       clientEmail: 'client@example.com',
@@ -117,6 +133,7 @@ describe('BookingsService (integration)', () => {
       expect(booking.manageToken).toBeTruthy();
       expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
         booking.id,
+        coach.id,
         'confirmed',
       );
     });
@@ -131,6 +148,7 @@ describe('BookingsService (integration)', () => {
       expect(booking.googleEventId).toBeNull();
       expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
         booking.id,
+        coach.id,
         'confirmed',
       );
     });
@@ -232,6 +250,7 @@ describe('BookingsService (integration)', () => {
       expect(cancelled.cancelledBy).toBe('CLIENT');
       expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
         booking.id,
+        coach.id,
         'cancelled',
       );
     });
@@ -259,6 +278,7 @@ describe('BookingsService (integration)', () => {
 
       await service.cancelByClient(booking.manageToken, {});
       expect(googleCalendarService.deleteEvent).toHaveBeenCalledWith(
+        coach.id,
         'existing-event-id',
       );
     });
@@ -329,15 +349,16 @@ describe('BookingsService (integration)', () => {
       const rescheduled = await service.rescheduleByClient(
         booking.manageToken,
         {
-          startAt: `${FUTURE_DAY}T14:00:00+02:00`,
+          startAt: futureAt(14).toISO()!,
         },
       );
 
       expect(rescheduled.startAt.toISOString()).toBe(
-        '2026-10-01T12:00:00.000Z',
+        futureAt(14).toUTC().toISO(),
       );
       expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
         booking.id,
+        coach.id,
         'rescheduled',
       );
     });
@@ -359,11 +380,12 @@ describe('BookingsService (integration)', () => {
       const rescheduled = await service.rescheduleByClient(
         booking.manageToken,
         {
-          startAt: `${FUTURE_DAY}T15:00:00+02:00`,
+          startAt: futureAt(15).toISO()!,
         },
       );
 
       expect(googleCalendarService.deleteEvent).toHaveBeenCalledWith(
+        coach.id,
         'fake-event-id',
       );
       expect(googleCalendarService.createMeetEvent).not.toHaveBeenCalled();
@@ -371,6 +393,7 @@ describe('BookingsService (integration)', () => {
       expect(rescheduled.googleEventId).toBeNull();
       expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
         booking.id,
+        coach.id,
         'rescheduled',
       );
     });
@@ -381,7 +404,7 @@ describe('BookingsService (integration)', () => {
       );
 
       await service.rescheduleByClient(booking.manageToken, {
-        startAt: `${FUTURE_DAY}T15:00:00+02:00`,
+        startAt: futureAt(15).toISO()!,
       });
 
       expect(googleCalendarService.deleteEvent).not.toHaveBeenCalled();
@@ -390,12 +413,12 @@ describe('BookingsService (integration)', () => {
     it('rejects rescheduling onto a slot that is already booked', async () => {
       const first = await service.create(createDto());
       const second = await service.create(
-        createDto({ startAt: `${FUTURE_DAY}T14:00:00+02:00` }),
+        createDto({ startAt: futureAt(14).toISO()! }),
       );
 
       await expect(
         service.rescheduleByClient(second.manageToken, {
-          startAt: `${FUTURE_DAY}T10:00:00+02:00`,
+          startAt: futureAt(10).toISO()!,
         }),
       ).rejects.toThrow(ConflictException);
 
@@ -404,7 +427,7 @@ describe('BookingsService (integration)', () => {
         where: { id: first.id },
       });
       expect(stillThere?.startAt.toISOString()).toBe(
-        '2026-10-01T08:00:00.000Z',
+        futureAt(10).toUTC().toISO(),
       );
     });
 
@@ -417,7 +440,7 @@ describe('BookingsService (integration)', () => {
 
       await expect(
         service.rescheduleByClient(booking.manageToken, {
-          startAt: `${FUTURE_DAY}T16:00:00+02:00`,
+          startAt: futureAt(16).toISO()!,
         }),
       ).rejects.toThrow(BadRequestException);
     });

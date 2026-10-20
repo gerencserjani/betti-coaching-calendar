@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { google } from 'googleapis';
+import { calendar as createCalendarClient } from '@googleapis/calendar';
 import { GoogleOAuthService } from './google-oauth.service.js';
 
 export interface CreateMeetEventInput {
@@ -24,9 +24,12 @@ export class GoogleCalendarService {
    * Creates a fresh Google Calendar event with a brand-new Meet room every
    * time, so previous clients can never re-enter or linger in an old room.
    */
-  async createMeetEvent(input: CreateMeetEventInput): Promise<MeetEventResult> {
-    const auth = await this.oauthService.getAuthenticatedClient();
-    const calendar = google.calendar({ version: 'v3', auth });
+  async createMeetEvent(
+    coachId: string,
+    input: CreateMeetEventInput,
+  ): Promise<MeetEventResult> {
+    const auth = await this.oauthService.getAuthenticatedClient(coachId);
+    const calendar = createCalendarClient({ version: 'v3', auth });
 
     const { data } = await calendar.events.insert({
       calendarId: 'primary',
@@ -60,9 +63,9 @@ export class GoogleCalendarService {
     return { eventId: data.id, meetLink };
   }
 
-  async deleteEvent(eventId: string): Promise<void> {
-    const auth = await this.oauthService.getAuthenticatedClient();
-    const calendar = google.calendar({ version: 'v3', auth });
+  async deleteEvent(coachId: string, eventId: string): Promise<void> {
+    const auth = await this.oauthService.getAuthenticatedClient(coachId);
+    const calendar = createCalendarClient({ version: 'v3', auth });
     await calendar.events
       .delete({ calendarId: 'primary', eventId, sendUpdates: 'none' })
       .catch(() => {

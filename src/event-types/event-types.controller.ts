@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -13,6 +14,7 @@ import { CurrentCoach } from '../auth/current-coach.decorator.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import type { Coach } from '@prisma/client';
 import { CreateEventTypeDto } from './dto/create-event-type.dto.js';
+import { QueryEventTypesDto } from './dto/query-event-types.dto.js';
 import { ReorderEventTypesDto } from './dto/reorder-event-types.dto.js';
 import { UpdateEventTypeDto } from './dto/update-event-type.dto.js';
 import { EventTypesService } from './event-types.service.js';
@@ -22,10 +24,11 @@ import { EventTypesService } from './event-types.service.js';
 export class EventTypesController {
   constructor(private readonly eventTypesService: EventTypesService) {}
 
-  // Public: the client-facing booking catalog.
+  // Public: the client-facing booking catalog, for the coach named by
+  // ?coachId= (see QueryEventTypesDto).
   @Get()
-  findActive() {
-    return this.eventTypesService.findActive();
+  findActive(@Query() query: QueryEventTypesDto) {
+    return this.eventTypesService.findActive(query.coachId);
   }
 
   @ApiBearerAuth()

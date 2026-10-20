@@ -26,10 +26,19 @@ enum CancelledBy {
 }
 
 enum CoachRole {
+  /// Cross-platform "super admin" -- sees/manages every Coach's data. Not
+  /// scoped to its own account for authorization purposes (see
+  /// auth/roles.guard.ts and every ownership check, which special-cases
+  /// this role as a bypass).
   ADMIN
   COACH
 }
 
+/// A Coach is both the bookable person AND the whole business: one website
+/// always belongs to exactly one Coach (see CONTEXT.md "Standing decision:
+/// one Tenant = one Coach, always" -- this model used to be split into a
+/// separate Tenant + Coach, merged back into one once multi-coach-per-
+/// business was explicitly ruled out).
 model Coach {
   id              String    @id @default(cuid())
   email           String    @unique
@@ -49,6 +58,8 @@ model Coach {
   weeklyAvailabilities WeeklyAvailability[]
   overrides            AvailabilityOverride[]
   bookings             Booking[]
+  settings             Settings?
+  googleIntegration    GoogleIntegration?
 }
 
 model EventType {
@@ -135,19 +146,29 @@ model Booking {
   @@index([status, startAt])
 }
 
-/// Singleton row (id is always "singleton").
+/// One row per Coach -- their business profile (address, cancellation
+/// policy, timezone). Keyed directly by coachId (1:1 extension of Coach),
+/// not a separate id.
 model Settings {
-  id                      String   @id @default("singleton")
+  coachId                 String   @id
+  coach                   Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
   businessAddress         String   @default("")
   cancellationNoticeHours Int      @default(48)
   businessTimezone        String   @default("Europe/Budapest")
+  /// "Name <address>" sender identity for this coach's Resend-verified
+  /// domain (see #13). Null means this coach hasn't verified a domain in
+  /// Resend yet -- EmailService falls back to the shared GMAIL_* sender
+  /// until set via PATCH /settings.
+  emailFrom               String?
   updatedAt               DateTime @updatedAt
 }
 
-/// Singleton row (id is always "singleton") holding the one central Google
-/// account used to mint fresh Google Meet links for bookings.
+/// One row per Coach -- the Google account used to mint fresh Meet links
+/// for their bookings (see #2). 1:1 extension of Coach, same pattern as
+/// Settings.
 model GoogleIntegration {
-  id                    String   @id @default("singleton")
+  coachId               String   @id
+  coach                 Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
   refreshTokenEncrypted String
   connectedEmail        String
   connectedAt           DateTime @default(now())

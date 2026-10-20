@@ -16,6 +16,11 @@ type NotificationKind = 'confirmed' | 'cancelled' | 'rescheduled';
 
 interface NotificationJobData {
   bookingId: string;
+  // Carried alongside bookingId purely so log lines/the pg-boss job table
+  // are self-describing (which coach is this job for?) without a join back
+  // to Booking -- the job itself always re-fetches the booking fresh and
+  // never trusts this for anything else.
+  coachId: string;
   kind: NotificationKind;
 }
 
@@ -57,22 +62,27 @@ export class NotificationJobsService implements OnModuleInit {
     );
   }
 
-  async enqueue(bookingId: string, kind: NotificationKind): Promise<void> {
+  async enqueue(
+    bookingId: string,
+    coachId: string,
+    kind: NotificationKind,
+  ): Promise<void> {
     const jobId = await this.pgBossService.boss.send(QUEUE_NAME, {
       bookingId,
+      coachId,
       kind,
     });
     this.logger.log(
-      `Enqueued ${kind} notification job ${jobId} for booking ${bookingId}`,
+      `Enqueued ${kind} notification job ${jobId} for booking ${bookingId} (coach ${coachId})`,
     );
   }
 
   private async process(
     job: JobWithMetadata<NotificationJobData>,
   ): Promise<void> {
-    const { bookingId, kind } = job.data;
+    const { bookingId, coachId, kind } = job.data;
     this.logger.log(
-      `Processing ${kind} notification job ${job.id} for booking ${bookingId} (attempt ${job.retryCount + 1}/${job.retryLimit + 1})`,
+      `Processing ${kind} notification job ${job.id} for booking ${bookingId} (coach ${coachId}, attempt ${job.retryCount + 1}/${job.retryLimit + 1})`,
     );
 
     const booking = await this.prisma.booking.findUnique({
@@ -82,7 +92,7 @@ export class NotificationJobsService implements OnModuleInit {
     if (!booking) {
       // Nothing sensible to retry toward - log and drop rather than fail forever.
       this.logger.warn(
-        `Booking ${bookingId} not found for a queued notification job, skipping`,
+        `Booking ${bookingId} (coach ${coachId}) not found for a queued notification job, skipping`,
       );
       return;
     }
@@ -104,7 +114,7 @@ export class NotificationJobsService implements OnModuleInit {
           break;
       }
       this.logger.log(
-        `Sent ${kind} notification emails for booking ${bookingId}`,
+        `Sent ${kind} notification emails for booking ${bookingId} (coach ${coachId})`,
       );
     } catch (error) {
       // Covers both steps above (Meet link creation and the email send) --
@@ -112,7 +122,7 @@ export class NotificationJobsService implements OnModuleInit {
       // discoverable by querying pgboss.job's `output` column directly --
       // rethrow so pg-boss's own retry/backoff still applies as configured.
       this.logger.error(
-        `Failed to process ${kind} notification job for booking ${bookingId} (job ${job.id}, attempt ${job.retryCount + 1}/${job.retryLimit + 1})`,
+        `Failed to process ${kind} notification job for booking ${bookingId} (coach ${coachId}, job ${job.id}, attempt ${job.retryCount + 1}/${job.retryLimit + 1})`,
         error,
       );
       throw error;
@@ -135,13 +145,16 @@ export class NotificationJobsService implements OnModuleInit {
       return booking;
     }
 
-    const meet = await this.googleCalendarService.createMeetEvent({
-      title: `${booking.eventType.title} — ${booking.clientName}`,
-      description: booking.clientNote ?? undefined,
-      startAt: booking.startAt,
-      endAt: booking.endAt,
-      attendeeEmails: [booking.clientEmail, booking.coach.email],
-    });
+    const meet = await this.googleCalendarService.createMeetEvent(
+      booking.coachId,
+      {
+        title: `${booking.eventType.title} — ${booking.clientName}`,
+        description: booking.clientNote ?? undefined,
+        startAt: booking.startAt,
+        endAt: booking.endAt,
+        attendeeEmails: [booking.clientEmail, booking.coach.email],
+      },
+    );
     const updated = await this.prisma.booking.update({
       where: { id: booking.id },
       data: { meetLink: meet.meetLink, googleEventId: meet.eventId },

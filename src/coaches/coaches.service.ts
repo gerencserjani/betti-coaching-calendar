@@ -12,7 +12,7 @@ export class CoachesService {
     private readonly passwordService: PasswordService,
   ) {}
 
-  /** All coaches, so anyone can see the shared calendar's full coach roster. */
+  /** ADMIN-only (see RolesGuard on the controller): every coach/business on the platform. */
   findAll(): Promise<Coach[]> {
     return this.prisma.coach.findMany({ orderBy: { name: 'asc' } });
   }
@@ -21,7 +21,7 @@ export class CoachesService {
     return this.prisma.coach.update({ where: { id: coachId }, data: dto });
   }
 
-  /** Admin-only: provision a new coach account. There is no public self-signup. */
+  /** ADMIN-only: provision a brand-new coach/business. There is no public self-signup. */
   async create(dto: CreateCoachDto): Promise<Coach> {
     const existing = await this.prisma.coach.findUnique({
       where: { email: dto.email },
@@ -40,6 +40,7 @@ export class CoachesService {
     });
   }
 
+  /** ADMIN-only. */
   revokeSessions(coachId: string): Promise<Coach> {
     return this.prisma.coach.update({
       where: { id: coachId },

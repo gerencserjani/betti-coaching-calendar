@@ -67,7 +67,6 @@ export class BookingsService {
   async create(dto: CreateBookingDto): Promise<BookingWithRelations> {
     const eventType = await this.prisma.eventType.findUnique({
       where: { id: dto.eventTypeId },
-      include: { coach: true },
     });
     if (!eventType || !eventType.isActive) {
       throw new NotFoundException(
@@ -80,7 +79,7 @@ export class BookingsService {
       );
     }
 
-    const settings = await this.settingsService.get();
+    const settings = await this.settingsService.get(eventType.coachId);
     const timezone = settings.businessTimezone;
 
     const startAt = DateTime.fromISO(dto.startAt, { setZone: true });
@@ -129,7 +128,11 @@ export class BookingsService {
     // see NotificationJobsService.ensureMeetLink. It's an external API call
     // with real failure risk, and the confirmation screen doesn't need the
     // link synchronously (it's delivered via the email/ics attachment).
-    await this.notificationJobsService.enqueue(booking.id, 'confirmed');
+    await this.notificationJobsService.enqueue(
+      booking.id,
+      booking.coachId,
+      'confirmed',
+    );
 
     return booking;
   }
@@ -140,14 +143,22 @@ export class BookingsService {
   ): Promise<BookingWithRelations> {
     const booking = await this.findByManageToken(token);
     this.assertConfirmed(booking, booking.locale);
-    await this.assertWithinNoticeWindow(booking.startAt, booking.locale);
+    await this.assertWithinNoticeWindow(
+      booking.coachId,
+      booking.startAt,
+      booking.locale,
+    );
 
     const updated = await this.applyCancellation(
       booking,
       CancelledBy.CLIENT,
       dto.reason,
     );
-    await this.notificationJobsService.enqueue(updated.id, 'cancelled');
+    await this.notificationJobsService.enqueue(
+      updated.id,
+      updated.coachId,
+      'cancelled',
+    );
     return updated;
   }
 
@@ -172,7 +183,11 @@ export class BookingsService {
       CancelledBy.COACH,
       dto.reason,
     );
-    await this.notificationJobsService.enqueue(updated.id, 'cancelled');
+    await this.notificationJobsService.enqueue(
+      updated.id,
+      updated.coachId,
+      'cancelled',
+    );
     return updated;
   }
 
@@ -182,9 +197,13 @@ export class BookingsService {
   ): Promise<BookingWithRelations> {
     const booking = await this.findByManageToken(token);
     this.assertConfirmed(booking, booking.locale);
-    await this.assertWithinNoticeWindow(booking.startAt, booking.locale);
+    await this.assertWithinNoticeWindow(
+      booking.coachId,
+      booking.startAt,
+      booking.locale,
+    );
 
-    const settings = await this.settingsService.get();
+    const settings = await this.settingsService.get(booking.coachId);
     const timezone = settings.businessTimezone;
 
     const startAt = DateTime.fromISO(dto.startAt, { setZone: true });
@@ -233,7 +252,10 @@ export class BookingsService {
       // notification job instead (NotificationJobsService.ensureMeetLink):
       // that's the actual failure-prone external API call, and it shouldn't
       // block this response or risk the client's already-committed new time.
-      await this.googleCalendarService.deleteEvent(updated.googleEventId);
+      await this.googleCalendarService.deleteEvent(
+        updated.coachId,
+        updated.googleEventId,
+      );
       updated = await this.prisma.booking.update({
         where: { id: updated.id },
         data: { meetLink: null, googleEventId: null },
@@ -241,7 +263,11 @@ export class BookingsService {
       });
     }
 
-    await this.notificationJobsService.enqueue(updated.id, 'rescheduled');
+    await this.notificationJobsService.enqueue(
+      updated.id,
+      updated.coachId,
+      'rescheduled',
+    );
 
     return updated;
   }
@@ -252,7 +278,10 @@ export class BookingsService {
     reason: string | undefined,
   ): Promise<BookingWithRelations> {
     if (booking.googleEventId) {
-      await this.googleCalendarService.deleteEvent(booking.googleEventId);
+      await this.googleCalendarService.deleteEvent(
+        booking.coachId,
+        booking.googleEventId,
+      );
     }
     return this.prisma.booking.update({
       where: { id: booking.id },
@@ -277,10 +306,11 @@ export class BookingsService {
   }
 
   private async assertWithinNoticeWindow(
+    coachId: string,
     startAt: Date,
     locale: string,
   ): Promise<void> {
-    const settings = await this.settingsService.get();
+    const settings = await this.settingsService.get(coachId);
     const cutoff = DateTime.now().plus({
       hours: settings.cancellationNoticeHours,
     });

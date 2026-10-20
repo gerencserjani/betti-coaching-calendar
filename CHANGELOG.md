@@ -1,3 +1,58 @@
+# [1.13.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.12.0...v1.13.0) (2026-10-20)
+
+### Features
+
+- carry coachId on queued notification jobs for log observability ([46e09ea](https://github.com/gerencserjani/betti-coaching-calendar/commit/46e09ea2042c562608d6269d769b45d12db4512a))
+
+# [1.12.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.11.0...v1.12.0) (2026-10-20)
+
+### Features
+
+- coachId-based resolution for the public, unauthenticated endpoints ([c8f47a0](https://github.com/gerencserjani/betti-coaching-calendar/commit/c8f47a0d9381956da803db05b8d272170fd6b358))
+
+# [1.11.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.10.0...v1.11.0) (2026-10-19)
+
+### Features
+
+- make Google Calendar/Meet integration tenant-scoped ([0cca9b9](https://github.com/gerencserjani/betti-coaching-calendar/commit/0cca9b95050d43a6a701735e06f773c9b601d7eb)), closes [#2](https://github.com/gerencserjani/betti-coaching-calendar/issues/2)
+- tenant-aware email sending via Resend, with a Gmail fallback ([85bd4be](https://github.com/gerencserjani/betti-coaching-calendar/commit/85bd4be846be2348f4ef7129342f13586fcf18a0)), closes [#13](https://github.com/gerencserjani/betti-coaching-calendar/issues/13)
+
+# [1.10.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.9.0...v1.10.0) (2026-10-19)
+
+### Features
+
+- replace singleton Settings with per-tenant settings ([8b72fc9](https://github.com/gerencserjani/betti-coaching-calendar/commit/8b72fc9c20920aa6348185394dbf127950c3262e)), closes [#14](https://github.com/gerencserjani/betti-coaching-calendar/issues/14) [#2](https://github.com/gerencserjani/betti-coaching-calendar/issues/2) [#13](https://github.com/gerencserjani/betti-coaching-calendar/issues/13) [#14](https://github.com/gerencserjani/betti-coaching-calendar/issues/14) [#12](https://github.com/gerencserjani/betti-coaching-calendar/issues/12)
+
+# [1.9.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.3...v1.9.0) (2026-10-19)
+
+### Features
+
+- introduce Tenant entity as the multi-tenant foundation ([da4ee0e](https://github.com/gerencserjani/betti-coaching-calendar/commit/da4ee0eedda19e250dc3fbb31e0a9be41c0d2637)), closes [#11](https://github.com/gerencserjani/betti-coaching-calendar/issues/11) [#12](https://github.com/gerencserjani/betti-coaching-calendar/issues/12) [#13](https://github.com/gerencserjani/betti-coaching-calendar/issues/13) [#14](https://github.com/gerencserjani/betti-coaching-calendar/issues/14) [#15](https://github.com/gerencserjani/betti-coaching-calendar/issues/15) [#16](https://github.com/gerencserjani/betti-coaching-calendar/issues/16) [#17](https://github.com/gerencserjani/betti-coaching-calendar/issues/17)
+
+## [1.8.3](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.2...v1.8.3) (2026-10-14)
+
+### Performance Improvements
+
+- switch production to Neon's pooled connection, keep direct for migrations ([f6d97fd](https://github.com/gerencserjani/betti-coaching-calendar/commit/f6d97fde8dc00000e96c6c8d60c716fb2b4e5946))
+
+## [1.8.2](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.1...v1.8.2) (2026-10-14)
+
+### Bug Fixes
+
+- replace stale hardcoded test dates with dynamically computed future dates ([9a4ccb9](https://github.com/gerencserjani/betti-coaching-calendar/commit/9a4ccb9f1d4c397403b833eb91ed9ff683d0e964))
+
+## [1.8.1](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.8.0...v1.8.1) (2026-10-14)
+
+### Performance Improvements
+
+- cut Cloud Run cold-start latency (migration boot step, lazy email import, googleapis size) ([2429622](https://github.com/gerencserjani/betti-coaching-calendar/commit/24296227c9e947359ceff7bdda3a112205d980ea))
+
+# [1.8.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.7.3...v1.8.0) (2026-10-14)
+
+### Features
+
+- add brand logo to transactional booking emails ([d1adcfb](https://github.com/gerencserjani/betti-coaching-calendar/commit/d1adcfb10c0e503b326d574a431f3e7308e7fe7b))
+
 ## [1.7.3](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.7.2...v1.7.3) (2026-09-18)
 
 ### Bug Fixes

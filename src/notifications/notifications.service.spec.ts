@@ -46,12 +46,15 @@ describe('NotificationsService (integration)', () => {
 
   beforeEach(async () => {
     await resetDatabase();
+    coach = await createTestCoach();
     await testPrisma.settings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', businessAddress: 'Budapest, Teszt utca 1.' },
+      where: { coachId: coach.id },
+      create: {
+        coachId: coach.id,
+        businessAddress: 'Budapest, Teszt utca 1.',
+      },
       update: { businessAddress: 'Budapest, Teszt utca 1.' },
     });
-    coach = await createTestCoach();
     eventType = await createTestEventType(coach.id);
     emailService = fakeEmailService();
     service = new NotificationsService(

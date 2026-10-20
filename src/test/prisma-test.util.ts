@@ -7,9 +7,9 @@ export const testPrisma = new PrismaClient({
 });
 
 /**
- * Truncates every app-owned table between tests, in FK-safe order, and
- * resets the Settings/GoogleIntegration singletons. Leaves pg-boss's own
- * schema alone - individual job tests clean up after themselves.
+ * Truncates every app-owned table between tests, in FK-safe order. Leaves
+ * pg-boss's own schema alone - individual job tests clean up after
+ * themselves.
  */
 export async function resetDatabase(): Promise<void> {
   await testPrisma.booking.deleteMany();

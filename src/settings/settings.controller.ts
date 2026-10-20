@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { CurrentCoach } from '../auth/current-coach.decorator.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
-import { Roles } from '../auth/roles.decorator.js';
-import { RolesGuard } from '../auth/roles.guard.js';
-import { CoachRole } from '@prisma/client';
+import type { Coach } from '@prisma/client';
+import { QuerySettingsDto } from './dto/query-settings.dto.js';
 import { UpdateSettingsDto } from './dto/update-settings.dto.js';
 import { SettingsService } from './settings.service.js';
 
@@ -12,17 +12,22 @@ import { SettingsService } from './settings.service.js';
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
-  // Public: the client-facing booking page needs the business address/timezone.
+  // Public: the client-facing booking page needs the business address/
+  // timezone, for the coach named by ?coachId= (see QuerySettingsDto). The
+  // admin dashboard's own Settings page also calls this (unauthenticated,
+  // since the data isn't sensitive) passing its own coachId from useAuth().
   @Get()
-  get() {
-    return this.settingsService.get();
+  get(@Query() query: QuerySettingsDto) {
+    return this.settingsService.get(query.coachId);
   }
 
+  // Any authenticated coach, not just ADMIN: this always updates the
+  // caller's own Settings row (resolved from their own coachId), never
+  // someone else's, so there's nothing here to restrict by role.
   @ApiBearerAuth()
   @Patch()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(CoachRole.ADMIN)
-  update(@Body() dto: UpdateSettingsDto) {
-    return this.settingsService.update(dto);
+  @UseGuards(JwtAuthGuard)
+  update(@CurrentCoach() coach: Coach, @Body() dto: UpdateSettingsDto) {
+    return this.settingsService.update(coach.id, dto);
   }
 }

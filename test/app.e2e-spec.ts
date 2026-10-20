@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
+import { DateTime } from 'luxon';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { PrismaExceptionFilter } from '../src/common/prisma-exception.filter.js';
@@ -21,6 +22,15 @@ import {
 import { CoachRole, LocationType } from '@prisma/client';
 
 jest.setTimeout(30_000);
+
+// Comfortably in the future (10 days clears the default 48h
+// cancellationNoticeHours with margin), computed at test-run time rather
+// than hardcoded -- a fixed calendar date goes stale once real time catches
+// up to it, since booking creation rejects any startAt in the past.
+const FUTURE_DAY = DateTime.now()
+  .setZone('Europe/Budapest')
+  .plus({ days: 10 })
+  .startOf('day');
 
 describe('App (e2e)', () => {
   let app: INestApplication;
@@ -96,7 +106,9 @@ describe('App (e2e)', () => {
         password: 'correct-password',
       });
 
-      const unauthorized = await request(app.getHttpServer()).get('/coaches');
+      const unauthorized = await request(app.getHttpServer()).get(
+        '/coaches/me',
+      );
       expect(unauthorized.status).toBe(401);
 
       const login = await request(app.getHttpServer())
@@ -108,10 +120,10 @@ describe('App (e2e)', () => {
       const token = login.body.accessToken as string;
 
       const authorized = await request(app.getHttpServer())
-        .get('/coaches')
+        .get('/coaches/me')
         .set('Authorization', `Bearer ${token}`);
       expect(authorized.status).toBe(200);
-      expect(Array.isArray(authorized.body)).toBe(true);
+      expect(authorized.body.email).toBe('e2e-coach2@example.com');
     });
   });
 
@@ -128,7 +140,7 @@ describe('App (e2e)', () => {
         .post('/bookings')
         .send({
           eventTypeId: eventType.id,
-          startAt: '2026-10-01T10:00:00+02:00',
+          startAt: FUTURE_DAY.set({ hour: 10 }).toISO()!,
           location: LocationType.PHONE,
           clientName: 'E2E Client',
           clientEmail: 'e2e-client@example.com',
@@ -168,20 +180,18 @@ describe('App (e2e)', () => {
         locations: [LocationType.PHONE],
       });
 
-      const res = await request(app.getHttpServer())
-        .get('/slots')
-        .query({
-          eventTypeId: eventType.id,
-          from: '2026-10-01',
-          to: '2026-10-01',
-        });
+      const res = await request(app.getHttpServer()).get('/slots').query({
+        eventTypeId: eventType.id,
+        from: FUTURE_DAY.toISODate(),
+        to: FUTURE_DAY.toISODate(),
+      });
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThan(0);
     });
 
-    it('lists active event types publicly, without leaking archived or another coach data shape', async () => {
+    it("lists one coach's active event types publicly, without leaking archived or another coach's catalog", async () => {
       const coach = await createTestCoach();
       await createTestEventType(coach.id, {
         title: 'Active One',
@@ -191,12 +201,25 @@ describe('App (e2e)', () => {
         title: 'Archived One',
         isActive: false,
       });
+      const otherCoach = await createTestCoach();
+      await createTestEventType(otherCoach.id, {
+        title: 'Other Coach Active',
+        isActive: true,
+      });
 
-      const res = await request(app.getHttpServer()).get('/event-types');
+      const res = await request(app.getHttpServer())
+        .get('/event-types')
+        .query({ coachId: coach.id });
       expect(res.status).toBe(200);
       const titles = res.body.map((e: { title: string }) => e.title);
       expect(titles).toContain('Active One');
       expect(titles).not.toContain('Archived One');
+      expect(titles).not.toContain('Other Coach Active');
+    });
+
+    it('rejects GET /event-types with no coachId', async () => {
+      const res = await request(app.getHttpServer()).get('/event-types');
+      expect(res.status).toBe(400);
     });
   });
 

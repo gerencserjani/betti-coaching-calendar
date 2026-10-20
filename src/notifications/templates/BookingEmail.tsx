@@ -6,6 +6,7 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Preview,
   Section,
   Text,
@@ -34,6 +35,7 @@ export interface BookingEmailLink {
 }
 
 export interface BookingEmailProps {
+  logoUrl: string;
   previewText: string;
   heading: string;
   intro: string;
@@ -56,6 +58,7 @@ export interface BookingEmailProps {
 }
 
 export function BookingEmail({
+  logoUrl,
   previewText,
   heading,
   intro,
@@ -78,6 +81,13 @@ export function BookingEmail({
       <Body style={styles.main} className="bcc-body">
         <Container style={styles.container} className="bcc-container">
           <Section style={styles.letterhead} className="bcc-letterhead">
+            <Img
+              src={logoUrl}
+              width={56}
+              height={56}
+              alt={BRAND_NAME}
+              style={styles.logo}
+            />
             <Text style={styles.brandName} className="bcc-brand-name">
               {BRAND_NAME}
             </Text>
@@ -255,6 +265,10 @@ const styles = {
     padding: '28px 32px 22px',
     textAlign: 'center' as const,
     borderBottom: `1px solid ${light.line}`,
+  },
+  logo: {
+    display: 'block',
+    margin: '0 auto 10px',
   },
   brandName: {
     fontFamily: serif,

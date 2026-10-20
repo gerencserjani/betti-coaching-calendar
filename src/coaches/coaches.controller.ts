@@ -25,6 +25,8 @@ export class CoachesController {
   constructor(private readonly coachesService: CoachesService) {}
 
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles(CoachRole.ADMIN)
   findAll() {
     return this.coachesService.findAll();
   }

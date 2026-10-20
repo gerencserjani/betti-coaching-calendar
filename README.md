@@ -1,6 +1,9 @@
-# betti-coaching-calendar
+# coach-calendar
 
-Booking/calendar backend API for the [betti-coaching](https://github.com/gerencserjani/betti-coaching) website — a [NestJS](https://nestjs.com) project.
+Booking/calendar backend API: coach accounts, event types, availability, and
+bookings, shared by any number of independent coach websites — a
+[NestJS](https://nestjs.com) project. Currently used by
+[betti-coaching](https://github.com/gerencserjani/betti-coaching).
 
 A single shared booking calendar: coaches each manage their own event types and
 weekly availability, clients book without an account, and the whole thing is
@@ -13,7 +16,7 @@ open-source, MIT-licensed community fork) — much simplified for one frontend.
 graph TB
     Client["Browser / frontend<br/>(Vercel)"]
     API["NestJS API<br/>Google Cloud Run — scale-to-zero"]
-    DB[("Postgres<br/>Neon — scale-to-zero, direct connection")]
+    DB[("Postgres<br/>Neon — scale-to-zero, pooled connection")]
     Gmail["Gmail SMTP<br/>(App Password)"]
     GCal["Google Calendar API<br/>(one shared OAuth account)"]
 
@@ -113,15 +116,27 @@ each other's fixtures mid-test.
 
 See `.env.example` for the full list. Notes on the less obvious ones:
 
-- **`DATABASE_URL`** — read directly by Prisma; matches the credentials in
-  `docker-compose.yml` out of the box.
+- **`DATABASE_URL`** — the local/test connection string; matches the
+  credentials in `docker-compose.yml` out of the box. Also the fallback the
+  app and the migration tooling both use whenever the two production-only
+  vars below aren't set, since local/test Postgres has no pooled/direct
+  distinction.
+- **`DATABASE_POOLER_URL`** — production only. Neon's **pooled** (PgBouncer)
+  connection string, with `?pgbouncer=true` appended. Used by the running
+  app itself (`PrismaService`, `PgBossService`) for all normal
+  queries/jobs. See "Production hosting" below for why.
+- **`DATABASE_DIRECT_URL`** — production only. Neon's **direct**
+  (non-pooled) connection string, used only for schema migrations (`prisma
+migrate deploy`/`dev`, `prisma studio`) -- DDL isn't reliable through a
+  transaction pooler.
 - **`JWT_SECRET`** — signs the app's own login tokens (see "Auth" below).
   32+ random characters; generate with `openssl rand -base64 32`.
-- **`GMAIL_USER` / `GMAIL_APP_PASSWORD`** — email is sent through Gmail's own
-  SMTP, authenticated as a real Gmail account. This is deliberate, not a
-  placeholder: third-party email APIs (Resend, SendGrid, …) can never send
-  _from_ a `@gmail.com` address — only Google's own servers are authorized to
-  (that's what SPF/DKIM enforce) — so sending through Gmail SMTP directly is
+- **`GMAIL_USER` / `GMAIL_APP_PASSWORD` / `EMAIL_FROM`** — the default/
+  fallback sender, used by any coach that hasn't verified its own domain
+  (see `RESEND_API_KEY` just below). Sent through Gmail's own SMTP,
+  authenticated as a real Gmail account: a third-party email API (Resend,
+  SendGrid, …) can never send _from_ a `@gmail.com` address — only Google's
+  own servers are authorized to (that's what SPF/DKIM enforce) — so this is
   the correct way to have `EMAIL_FROM` genuinely be a Gmail address. Turn on
   2-Step Verification on that Google account, then generate an **App
   Password** (not the account password) at
@@ -129,7 +144,14 @@ See `.env.example` for the full list. Notes on the less obvious ones:
   `EMAIL_FROM` must be `GMAIL_USER` itself, or a "Send mail as" alias
   configured on that account — Gmail SMTP rejects/rewrites a From address it
   doesn't recognize. Gmail's sending limit is ~500/day on a regular account,
-  far above what this app needs.
+  shared across every coach still on this fallback.
+- **`RESEND_API_KEY`** — optional. Once set, a coach can verify its own
+  sending domain at [resend.com](https://resend.com) (free tier: 3,000
+  emails/month, 3 verified domains) and set `Settings.emailFrom` (via
+  `PATCH /settings`) to a `"Name <address>"` at that domain — that coach's
+  emails then go out through Resend as its own business, instead of the
+  shared Gmail fallback above. See `EmailService` for the per-send
+  Resend-vs-Gmail decision.
 - **`ENCRYPTION_KEY`** — 32-byte, base64-encoded key used to encrypt the
   stored Google refresh token at rest. Generate with `openssl rand -base64 32`
   (a working dev value is already in `.env`, generate a fresh one for
@@ -344,6 +366,22 @@ always-free tiers at this app's traffic level. See the write-up on why these
 two (and not Render/Railway/Fly.io) in the project conversation history if
 you need the reasoning.
 
+**Set `DATABASE_POOLER_URL` to Neon's pooled connection string, and
+`DATABASE_DIRECT_URL` to the direct one** (used for migrations -- see
+"Environment variables" above). Reasoning: Neon's compute scales to zero on idle, same as
+Cloud Run. pg-boss holds a long-lived connection pool that polls every few
+seconds in the background; when Neon suspends the compute out from under
+that pool, pg-boss's connection drops and it has to reconnect, sometimes
+repeatedly, before the compute fully stabilizes (seen in production as a
+burst of `pg-boss error` log lines for several minutes after every cold
+start). The pooled endpoint sits in front of the compute via PgBouncer and
+doesn't itself suspend, so it absorbs that churn instead of the app seeing
+it. It costs nothing extra on Neon's free tier -- billing there is CU-hours/
+storage/transfer, not per-connection-type -- and it's not a paid-only
+feature; it's always available, Neon just also needs you to use the direct
+one for migrations, since the pooled one can't run DDL/session-level
+operations reliably.
+
 Run `bash scripts/setup-production.sh` **directly in Git Bash** (not via
 PowerShell calling `bash`, and not through an AI-assistant's one-shot command
 runner — it's fully interactive across 8 stages and needs a real TTY you can
@@ -354,6 +392,26 @@ links, the Gmail App Password, and the first `gcloud run deploy`. It writes secr
 local-dev `.env`) and remembers what you've already entered if you stop and
 re-run it. The very last thing it prompts for is running
 `node scripts/seed-admin.mjs` against production — see "Auth" above.
+
+### Redeploying
+
+```
+gcloud run deploy betti-coaching-calendar --source . --region europe-west1 --project <project-id>
+```
+
+The container no longer runs `prisma migrate deploy` on boot (that was
+adding ~7-8s to _every_ cold start, not just deploys, for a check that's a
+no-op almost every time). Whenever a deploy includes a new migration, apply
+it once, separately, against production:
+
+```
+npm run migrate:prod
+```
+
+(reads `.env.production`, same pattern as `jobs:dashboard:prod` -- `prisma7.config.ts`
+picks up `DATABASE_DIRECT_URL` from it automatically). Order doesn't matter
+much either way, but migrating first means the new revision never serves
+traffic against an old schema.
 
 ## Known follow-ups
 

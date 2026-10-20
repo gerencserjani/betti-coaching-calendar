@@ -145,7 +145,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
 
   it('routes a "confirmed" job to notifyBookingConfirmed with the full booking', async () => {
     const booking = await createBooking();
-    await service.enqueue(booking.id, 'confirmed');
+    await service.enqueue(booking.id, booking.coachId, 'confirmed');
 
     await waitFor(
       () => notificationsService.notifyBookingConfirmed.mock.calls.length > 0,
@@ -162,7 +162,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
 
   it('routes a "cancelled" job to notifyBookingCancelled', async () => {
     const booking = await createBooking();
-    await service.enqueue(booking.id, 'cancelled');
+    await service.enqueue(booking.id, booking.coachId, 'cancelled');
 
     await waitFor(
       () => notificationsService.notifyBookingCancelled.mock.calls.length > 0,
@@ -174,7 +174,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
 
   it('routes a "rescheduled" job to notifyBookingRescheduled', async () => {
     const booking = await createBooking();
-    await service.enqueue(booking.id, 'rescheduled');
+    await service.enqueue(booking.id, booking.coachId, 'rescheduled');
 
     await waitFor(
       () => notificationsService.notifyBookingRescheduled.mock.calls.length > 0,
@@ -185,7 +185,11 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
   });
 
   it('drops the job without throwing when the booking no longer exists', async () => {
-    await service.enqueue('does-not-exist-booking-id', 'confirmed');
+    await service.enqueue(
+      'does-not-exist-booking-id',
+      'does-not-exist-coach-id',
+      'confirmed',
+    );
 
     // Give the worker a couple of poll cycles to pick it up and skip it;
     // nothing to assert on directly beyond "the mock is never called".
@@ -199,7 +203,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
       new Error('transient SMTP failure'),
     );
 
-    await service.enqueue(booking.id, 'confirmed');
+    await service.enqueue(booking.id, booking.coachId, 'confirmed');
 
     await waitFor(
       () => notificationsService.notifyBookingConfirmed.mock.calls.length >= 2,
@@ -213,7 +217,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
   it('creates the Google Meet link for a confirmed GOOGLE_MEET booking before sending the email', async () => {
     const booking = await createBooking({ location: LocationType.GOOGLE_MEET });
 
-    await service.enqueue(booking.id, 'confirmed');
+    await service.enqueue(booking.id, booking.coachId, 'confirmed');
 
     await waitFor(
       () => notificationsService.notifyBookingConfirmed.mock.calls.length > 0,
@@ -233,7 +237,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
   it('creates the Google Meet link for a rescheduled GOOGLE_MEET booking too', async () => {
     const booking = await createBooking({ location: LocationType.GOOGLE_MEET });
 
-    await service.enqueue(booking.id, 'rescheduled');
+    await service.enqueue(booking.id, booking.coachId, 'rescheduled');
 
     await waitFor(
       () => notificationsService.notifyBookingRescheduled.mock.calls.length > 0,
@@ -244,7 +248,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
   it('does not create a Meet link for a cancelled GOOGLE_MEET booking', async () => {
     const booking = await createBooking({ location: LocationType.GOOGLE_MEET });
 
-    await service.enqueue(booking.id, 'cancelled');
+    await service.enqueue(booking.id, booking.coachId, 'cancelled');
 
     await waitFor(
       () => notificationsService.notifyBookingCancelled.mock.calls.length > 0,
@@ -255,7 +259,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
   it('does not create a Meet link for a non-GOOGLE_MEET booking', async () => {
     const booking = await createBooking({ location: LocationType.PHONE });
 
-    await service.enqueue(booking.id, 'confirmed');
+    await service.enqueue(booking.id, booking.coachId, 'confirmed');
 
     await waitFor(
       () => notificationsService.notifyBookingConfirmed.mock.calls.length > 0,
@@ -270,7 +274,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
       googleEventId: 'already-there-id',
     });
 
-    await service.enqueue(booking.id, 'confirmed');
+    await service.enqueue(booking.id, booking.coachId, 'confirmed');
 
     await waitFor(
       () => notificationsService.notifyBookingConfirmed.mock.calls.length > 0,
@@ -287,7 +291,7 @@ describe('NotificationJobsService (integration, real pg-boss)', () => {
       new Error('Google API down'),
     );
 
-    await service.enqueue(booking.id, 'confirmed');
+    await service.enqueue(booking.id, booking.coachId, 'confirmed');
 
     // Right after the first (failing) attempt: unlike the old synchronous
     // flow, a transient Google API failure here must not delete an

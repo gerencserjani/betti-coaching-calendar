@@ -46,9 +46,9 @@ describe('TokenService', () => {
   });
 
   describe('Google connect state tokens', () => {
-    it('accepts a freshly signed state token', () => {
-      const token = service.signGoogleConnectState('admin-coach-id');
-      expect(() => service.verifyGoogleConnectState(token)).not.toThrow();
+    it('accepts a freshly signed state token and returns its coachId', () => {
+      const token = service.signGoogleConnectState('coach-1');
+      expect(service.verifyGoogleConnectState(token)).toBe('coach-1');
     });
 
     it('rejects a garbage state token', () => {
