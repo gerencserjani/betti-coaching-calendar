@@ -1,7 +1,13 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CoachRole, type Coach } from '@prisma/client';
 import { PasswordService } from '../auth/password.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { ChangePasswordDto } from './dto/change-password.dto.js';
 import type { CreateCoachDto } from './dto/create-coach.dto.js';
 import type { UpdateCoachDto } from './dto/update-coach.dto.js';
 
@@ -52,5 +58,31 @@ export class CoachesService {
     });
     this.logger.warn(`Revoked all sessions for coach ${coachId}`);
     return coach;
+  }
+
+  /**
+   * Self-service: always changes the caller's own password, never
+   * someone else's -- there's no coachId param, it's derived entirely
+   * from the authenticated `coach` passed in. Requires the current
+   * password so a hijacked, still-logged-in session can't be used to
+   * lock the real owner out silently.
+   */
+  async changePassword(coach: Coach, dto: ChangePasswordDto): Promise<void> {
+    const matches = await this.passwordService.compare(
+      dto.currentPassword,
+      coach.passwordHash,
+    );
+    if (!matches) {
+      this.logger.warn(
+        `Rejected password change for coach ${coach.id}: wrong current password`,
+      );
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    const passwordHash = await this.passwordService.hash(dto.newPassword);
+    await this.prisma.coach.update({
+      where: { id: coach.id },
+      data: { passwordHash },
+    });
+    this.logger.log(`Password changed for coach ${coach.id}`);
   }
 }

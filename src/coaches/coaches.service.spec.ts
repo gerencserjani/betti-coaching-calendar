@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { CoachRole } from '@prisma/client';
 import { PasswordService } from '../auth/password.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
@@ -82,6 +82,44 @@ describe('CoachesService (integration)', () => {
       expect(revoked.sessionsRevokedAt!.getTime()).toBeGreaterThanOrEqual(
         before.getTime(),
       );
+    });
+  });
+
+  describe('changePassword', () => {
+    it('changes the password when the current one is correct', async () => {
+      const coach = await createTestCoach({ password: 'old-password-123' });
+
+      await service.changePassword(coach, {
+        currentPassword: 'old-password-123',
+        newPassword: 'new-password-456',
+      });
+
+      const updated = await testPrisma.coach.findUniqueOrThrow({
+        where: { id: coach.id },
+      });
+      const passwordService = new PasswordService();
+      await expect(
+        passwordService.compare('new-password-456', updated.passwordHash),
+      ).resolves.toBe(true);
+      await expect(
+        passwordService.compare('old-password-123', updated.passwordHash),
+      ).resolves.toBe(false);
+    });
+
+    it('rejects a wrong current password without changing anything', async () => {
+      const coach = await createTestCoach({ password: 'old-password-123' });
+
+      await expect(
+        service.changePassword(coach, {
+          currentPassword: 'wrong-password',
+          newPassword: 'new-password-456',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      const unchanged = await testPrisma.coach.findUniqueOrThrow({
+        where: { id: coach.id },
+      });
+      expect(unchanged.passwordHash).toBe(coach.passwordHash);
     });
   });
 });
