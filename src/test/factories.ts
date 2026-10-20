@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import {
   CoachRole,
   LocationType,
+  type AllowedOrigin,
   type Coach,
   type EventType,
 } from '@prisma/client';
@@ -19,6 +20,7 @@ export async function createTestCoach(
     name: string;
     role: CoachRole;
     password: string;
+    frontendUrl: string | null;
   }> = {},
 ): Promise<Coach> {
   const passwordHash = await bcrypt.hash(
@@ -31,6 +33,17 @@ export async function createTestCoach(
       name: overrides.name ?? 'Test Coach',
       passwordHash,
       role: overrides.role ?? CoachRole.COACH,
+      frontendUrl: overrides.frontendUrl,
+    },
+  });
+}
+
+export async function createTestAllowedOrigin(
+  overrides: Partial<{ origin: string }> = {},
+): Promise<AllowedOrigin> {
+  return testPrisma.allowedOrigin.create({
+    data: {
+      origin: overrides.origin ?? `https://${unique('site')}.example.com`,
     },
   });
 }

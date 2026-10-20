@@ -12,6 +12,7 @@ import { EmailService } from '../src/notifications/email.service.js';
 import { buildOpenApiDocument } from '../src/swagger.js';
 import {
   createFullWeekAvailability,
+  createTestAllowedOrigin,
   createTestCoach,
   createTestEventType,
 } from '../src/test/factories.js';
@@ -240,13 +241,14 @@ describe('App (e2e)', () => {
           password: 'correct-password',
         });
 
+      const origin = await createTestAllowedOrigin();
       const res = await request(app.getHttpServer())
         .post('/coaches')
         .set('Authorization', `Bearer ${login.body.accessToken}`)
         .send({
           email: 'new-coach@example.com',
           name: 'New',
-          frontendUrl: 'https://new-coach.example.com',
+          frontendUrl: origin.origin,
         });
 
       expect(res.status).toBe(403);
@@ -262,13 +264,14 @@ describe('App (e2e)', () => {
         .post('/auth/login')
         .send({ email: 'admin@example.com', password: 'correct-password' });
 
+      const origin = await createTestAllowedOrigin();
       const res = await request(app.getHttpServer())
         .post('/coaches')
         .set('Authorization', `Bearer ${login.body.accessToken}`)
         .send({
           email: 'new-coach@example.com',
           name: 'New',
-          frontendUrl: 'https://new-coach.example.com',
+          frontendUrl: origin.origin,
         });
 
       expect(res.status).toBe(204);
@@ -283,6 +286,52 @@ describe('App (e2e)', () => {
         ),
       ).toBe(false);
     });
+
+    it('rejects inviting a coach to a site that already has one', async () => {
+      await createTestCoach({
+        email: 'admin3@example.com',
+        password: 'correct-password',
+        role: CoachRole.ADMIN,
+      });
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'admin3@example.com', password: 'correct-password' });
+      const origin = await createTestAllowedOrigin();
+      await createTestCoach({ frontendUrl: origin.origin });
+
+      const res = await request(app.getHttpServer())
+        .post('/coaches')
+        .set('Authorization', `Bearer ${login.body.accessToken}`)
+        .send({
+          email: 'another-new-coach@example.com',
+          name: 'Another',
+          frontendUrl: origin.origin,
+        });
+
+      expect(res.status).toBe(409);
+    });
+
+    it('rejects inviting a coach to a site that is not an allowed origin', async () => {
+      await createTestCoach({
+        email: 'admin4@example.com',
+        password: 'correct-password',
+        role: CoachRole.ADMIN,
+      });
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'admin4@example.com', password: 'correct-password' });
+
+      const res = await request(app.getHttpServer())
+        .post('/coaches')
+        .set('Authorization', `Bearer ${login.body.accessToken}`)
+        .send({
+          email: 'another-new-coach2@example.com',
+          name: 'Another',
+          frontendUrl: 'https://not-allow-listed.example.com',
+        });
+
+      expect(res.status).toBe(404);
+    });
   });
 
   describe('coach invite -> accept flow', () => {
@@ -296,13 +345,14 @@ describe('App (e2e)', () => {
         .post('/auth/login')
         .send({ email: 'admin2@example.com', password: 'correct-password' });
 
+      const origin = await createTestAllowedOrigin();
       await request(app.getHttpServer())
         .post('/coaches')
         .set('Authorization', `Bearer ${login.body.accessToken}`)
         .send({
           email: 'invited@example.com',
           name: 'Invited Coach',
-          frontendUrl: 'https://invited-coach.example.com',
+          frontendUrl: origin.origin,
         });
 
       const { html } = fakeEmailService.sendRaw.mock.calls[0][0] as {
@@ -319,6 +369,8 @@ describe('App (e2e)', () => {
       expect(accepted.status).toBe(201);
       expect(accepted.body.coach.email).toBe('invited@example.com');
       expect(accepted.body.accessToken).toBeDefined();
+
+      expect(accepted.body.coach.frontendUrl).toBe(origin.origin);
 
       const relogin = await request(app.getHttpServer())
         .post('/auth/login')

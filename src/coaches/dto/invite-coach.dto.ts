@@ -8,12 +8,12 @@ export class InviteCoachDto {
   @MinLength(1)
   name!: string;
 
-  // The coach's own frontend's origin (e.g. https://peti-coaching.vercel.app)
-  // -- the admin provides this since there's no other way for the backend
-  // to know it at invite time. Used only to build the invite link; not
-  // persisted (see CONTEXT.md's "Booking email links, per coach" for why
-  // ongoing emails instead derive this per-booking from the request's own
-  // Origin header).
+  // Must match one of the admin's already-allow-listed AllowedOrigin rows
+  // (see #35) -- CoachesService.invite() checks this, so an invite can only
+  // ever point at a real, known site, not a freehand URL. Persisted as
+  // Coach.frontendUrl once the invite is accepted; AllowedOrigin itself
+  // stays a separate, global, coach-agnostic CORS list -- it is not where
+  // "which coach owns this site" gets recorded.
   @IsUrl({ require_tld: false })
   frontendUrl!: string;
 }

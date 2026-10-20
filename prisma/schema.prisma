@@ -54,6 +54,15 @@ model Coach {
   // other revocation path.
   sessionsRevokedAt DateTime?
 
+  /// The coach's own site, set once at invite-acceptance time (see
+  /// CoachesService.invite/acceptInvite). Must match one of the admin's
+  /// already-allow-listed AllowedOrigin rows at invite time (so an invite
+  /// can only ever point at a real, known site), but AllowedOrigin itself
+  /// stays a separate, global, coach-agnostic CORS list -- this column is
+  /// the only place "which coach owns this site" is recorded. @unique is
+  /// what stops two coaches from ever sharing the same site.
+  frontendUrl String? @unique
+
   eventTypes           EventType[]
   weeklyAvailabilities WeeklyAvailability[]
   overrides            AvailabilityOverride[]

@@ -30,6 +30,9 @@ interface GoogleConnectStatePayload {
 export interface CoachInvitePayload {
   email: string;
   name: string;
+  // The coach's own site, carried through to acceptInvite() so it can be
+  // persisted onto the newly created Coach (see Coach.frontendUrl).
+  frontendUrl: string;
 }
 
 interface CoachInviteTokenPayload extends CoachInvitePayload {
@@ -119,6 +122,10 @@ export class TokenService {
     if (payload.purpose !== COACH_INVITE_PURPOSE) {
       throw new UnauthorizedException('Invalid or expired invite link');
     }
-    return { email: payload.email, name: payload.name };
+    return {
+      email: payload.email,
+      name: payload.name,
+      frontendUrl: payload.frontendUrl,
+    };
   }
 }
