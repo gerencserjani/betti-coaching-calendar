@@ -96,13 +96,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired reset link');
     }
     const passwordHash = await this.passwordService.hash(dto.newPassword);
-    // One second in the past, not "now": the access token signed just below
-    // gets an `iat` floored to the current second, and JwtAuthGuard rejects
-    // a token whose `iat*1000 < sessionsRevokedAt`. Setting this to exactly
-    // "now" risks that same-second token being born already "revoked". Any
-    // real prior session's `iat` is comfortably further in the past than
-    // this one-second buffer.
-    const sessionsRevokedAt = new Date(Date.now() - 1000);
+    const sessionsRevokedAt = new Date();
     const updated = await this.prisma.coach.update({
       where: { id: coach.id },
       data: { passwordHash, sessionsRevokedAt },
@@ -110,10 +104,20 @@ export class AuthService {
     this.logger.log(
       `Password reset for coach ${updated.id} (${updated.email})`,
     );
+    // JwtAuthGuard rejects a token whose `iat*1000 < sessionsRevokedAt`, and
+    // jwt `iat` only has whole-second resolution -- a token signed "now"
+    // (the default) could land in the SAME second as sessionsRevokedAt
+    // above, which is ambiguous: it would make this fresh token (correctly
+    // meant to survive) indistinguishable from a stale one issued earlier
+    // in that same second (correctly meant to be revoked). Pinning `iat`
+    // to one full second past sessionsRevokedAt's own second resolves the
+    // ambiguity in both directions: this token always clears the check,
+    // and anything issued in or before sessionsRevokedAt's second doesn't.
     const accessToken = this.tokenService.sign({
       sub: updated.id,
       email: updated.email,
       role: updated.role,
+      iat: Math.floor(sessionsRevokedAt.getTime() / 1000) + 1,
     });
     return { accessToken, coach: updated };
   }
