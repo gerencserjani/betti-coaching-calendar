@@ -1,3 +1,9 @@
+## [1.20.1](https://github.com/gerencserjani/coach-calendar/compare/v1.20.0...v1.20.1) (2026-10-20)
+
+### Bug Fixes
+
+- make the password-reset link single-use ([#43](https://github.com/gerencserjani/coach-calendar/issues/43)) ([83b535c](https://github.com/gerencserjani/coach-calendar/commit/83b535ce06661d61c880d08cad98df14b5d31848))
+
 # [1.20.0](https://github.com/gerencserjani/coach-calendar/compare/v1.19.0...v1.20.0) (2026-10-20)
 
 ### Features
