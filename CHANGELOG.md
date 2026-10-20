@@ -1,3 +1,14 @@
+# [1.14.0](https://github.com/gerencserjani/coach-calendar/compare/v1.13.0...v1.14.0) (2026-10-20)
+
+### Bug Fixes
+
+- scope authenticated coach-data endpoints by coachId (refs [#27](https://github.com/gerencserjani/coach-calendar/issues/27)) ([cc75e27](https://github.com/gerencserjani/coach-calendar/commit/cc75e27af7105b4d2256cfa13d87245a174d74c2))
+- update stale enqueue() call sites for the current 3-arg signature ([cbca602](https://github.com/gerencserjani/coach-calendar/commit/cbca6021d0ad335c689117c5cd297827018fd0fc)), closes [pre-#17](https://github.com/pre-/issues/17)
+
+### Features
+
+- add structured logging across remaining backend services (refs [#28](https://github.com/gerencserjani/coach-calendar/issues/28)) ([b16d855](https://github.com/gerencserjani/coach-calendar/commit/b16d8555522f064ac73ea59c72f5f6684e890f17))
+
 # [1.13.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.12.0...v1.13.0) (2026-10-20)
 
 ### Features
