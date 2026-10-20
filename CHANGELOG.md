@@ -1,3 +1,9 @@
+# [1.18.0](https://github.com/gerencserjani/coach-calendar/compare/v1.17.0...v1.18.0) (2026-10-20)
+
+### Features
+
+- invite-based coach onboarding, created atomically on accept ([#38](https://github.com/gerencserjani/coach-calendar/issues/38)) ([87b9367](https://github.com/gerencserjani/coach-calendar/commit/87b9367041637c742ae5cc424c9ecca3dd3a2e4b)), closes [#32](https://github.com/gerencserjani/coach-calendar/issues/32)
+
 # [1.17.0](https://github.com/gerencserjani/coach-calendar/compare/v1.16.0...v1.17.0) (2026-10-20)
 
 ### Features
