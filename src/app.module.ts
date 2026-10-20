@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AllowedOriginsModule } from './allowed-origins/allowed-origins.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -34,6 +35,7 @@ import { SlotsModule } from './slots/slots.module.js';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     PrismaModule,
     I18nModule,
+    AllowedOriginsModule,
     AuthModule,
     SettingsModule,
     CoachesModule,

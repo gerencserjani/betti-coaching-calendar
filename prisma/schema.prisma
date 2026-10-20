@@ -174,3 +174,15 @@ model GoogleIntegration {
   connectedAt           DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
+
+/// Browser origins allowed through CORS (see main.ts's enableCors). Global,
+/// not per-coach: this covers every coach's own frontend domain plus
+/// non-coach tools (e.g. the admin tool, when hosted somewhere other than
+/// localhost, which is always allowed regardless of this table -- see #35).
+/// Managed via the admin tool, not a redeploy.
+model AllowedOrigin {
+  id        String   @id @default(cuid())
+  origin    String   @unique
+  label     String?
+  createdAt DateTime @default(now())
+}
