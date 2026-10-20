@@ -178,8 +178,26 @@ Instead:
   once, interactively, against whichever `DATABASE_URL` you point it at (local
   or production) — it prompts for email/name/password and stores only the
   bcrypt hash.
-- **Additional coach accounts** are created by an admin, via
-  `POST /coaches` (admin-only; body: `email`, `name`, `password`).
+- **Additional coach accounts are invite-based**, not created directly:
+  1. An admin calls `POST /coaches` (admin-only; body: `email`, `name`,
+     `frontendUrl` — the invited coach's own site, used to build the accept
+     link). This does **not** create a `Coach` row — there's no half-formed
+     account sitting in the DB while the invite is unused. It only mints a
+     signed, 7-day token (`TokenService.signCoachInviteToken`) carrying the
+     email+name, and emails it via the shared Gmail sender (see "Email
+     sending" below — there's no per-coach `Settings.emailFrom` yet, since
+     there's no Coach yet). Calling it again for the same email before it's
+     accepted (e.g. the first email got lost) just sends a fresh link —
+     nothing is persisted to collide with or clean up.
+  2. The invited coach opens `<frontendUrl>/accept-invite?token=...` and
+     submits a password to `POST /coaches/accept-invite` (public — they have
+     no session yet). This verifies the token and creates the `Coach` row
+     for the first time, with email+name+password all together, then
+     returns an access token (same shape as login) so the frontend can log
+     them straight in.
+  - Rejected (`409`) if a `Coach` with that email already exists, whether at
+    invite time or at accept time (covers both "already a coach" and
+    replaying an already-used invite token).
 
 `passwordHash` is also stripped from every JSON response as a defense-in-depth
 measure (`StripPasswordHashInterceptor`, registered globally in `main.ts`),
