@@ -1,11 +1,15 @@
 import { jest } from '@jest/globals';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { CoachRole } from '@prisma/client';
 import { PasswordService } from '../auth/password.service.js';
 import { TokenService } from '../auth/token.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
-import { createTestCoach } from '../test/factories.js';
+import { createTestAllowedOrigin, createTestCoach } from '../test/factories.js';
 import {
   disconnectTestPrisma,
   resetDatabase,
@@ -45,16 +49,18 @@ describe('CoachesService (integration)', () => {
 
   describe('invite', () => {
     it('sends an invite email without creating a Coach row', async () => {
+      const origin = await createTestAllowedOrigin();
+
       await service.invite({
         email: 'new@example.com',
         name: 'New Coach',
-        frontendUrl: 'https://new-coach.example.com',
+        frontendUrl: origin.origin,
       });
 
       expect(sendInvite).toHaveBeenCalledWith(
         'new@example.com',
         'New Coach',
-        'https://new-coach.example.com',
+        origin.origin,
         expect.any(String),
       );
       const coach = await testPrisma.coach.findUnique({
@@ -65,23 +71,50 @@ describe('CoachesService (integration)', () => {
 
     it('rejects inviting an email that already belongs to a coach', async () => {
       await createTestCoach({ email: 'dup@example.com' });
+      const origin = await createTestAllowedOrigin();
 
       await expect(
         service.invite({
           email: 'dup@example.com',
           name: 'Someone else',
-          frontendUrl: 'https://dup.example.com',
+          frontendUrl: origin.origin,
         }),
       ).rejects.toThrow(ConflictException);
+      expect(sendInvite).not.toHaveBeenCalled();
+    });
+
+    it('rejects inviting to a site that already has a coach', async () => {
+      const origin = await createTestAllowedOrigin();
+      await createTestCoach({ frontendUrl: origin.origin });
+
+      await expect(
+        service.invite({
+          email: 'someone@example.com',
+          name: 'Someone',
+          frontendUrl: origin.origin,
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(sendInvite).not.toHaveBeenCalled();
+    });
+
+    it('rejects inviting to a site that is not an allowed origin', async () => {
+      await expect(
+        service.invite({
+          email: 'someone@example.com',
+          name: 'Someone',
+          frontendUrl: 'https://not-allow-listed.example.com',
+        }),
+      ).rejects.toThrow(NotFoundException);
       expect(sendInvite).not.toHaveBeenCalled();
     });
   });
 
   describe('acceptInvite', () => {
-    it('creates the Coach with the COACH role, the invited email/name, and a hashed password', async () => {
+    it('creates the Coach with the COACH role, the invited email/name/frontendUrl, and a hashed password', async () => {
       const token = tokenService.signCoachInviteToken({
         email: 'accepted@example.com',
         name: 'Accepted Coach',
+        frontendUrl: 'https://accepted-coach.example.com',
       });
 
       const { accessToken, coach } = await service.acceptInvite({
@@ -91,6 +124,7 @@ describe('CoachesService (integration)', () => {
 
       expect(coach.email).toBe('accepted@example.com');
       expect(coach.name).toBe('Accepted Coach');
+      expect(coach.frontendUrl).toBe('https://accepted-coach.example.com');
       expect(coach.role).toBe(CoachRole.COACH);
       expect(coach.passwordHash).not.toBe('a-real-password');
       expect(coach.passwordHash.length).toBeGreaterThan(20);
@@ -102,11 +136,37 @@ describe('CoachesService (integration)', () => {
       const token = tokenService.signCoachInviteToken({
         email: 'already@example.com',
         name: 'Already',
+        frontendUrl: 'https://already.example.com',
       });
 
       await expect(
         service.acceptInvite({ token, password: 'a-real-password' }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    // The service layer itself doesn't pre-check frontendUrl here (invite()
+    // already did, at invite time) -- this is the Coach.frontendUrl @unique
+    // constraint acting as the real backstop against a race between two
+    // accept-invite calls for the same site. At this layer it surfaces as a
+    // raw Prisma error; the global PrismaExceptionFilter (see
+    // common/prisma-exception.filter.ts, exercised in the e2e suite) is
+    // what turns it into a 409 over HTTP.
+    it('rejects accepting if another coach already claimed this site in the meantime, without creating the Coach', async () => {
+      await createTestCoach({ frontendUrl: 'https://taken.example.com' });
+      const token = tokenService.signCoachInviteToken({
+        email: 'late@example.com',
+        name: 'Late',
+        frontendUrl: 'https://taken.example.com',
+      });
+
+      await expect(
+        service.acceptInvite({ token, password: 'a-real-password' }),
+      ).rejects.toMatchObject({ code: 'P2002' });
+
+      const coach = await testPrisma.coach.findUnique({
+        where: { email: 'late@example.com' },
+      });
+      expect(coach).toBeNull();
     });
 
     it('rejects an invalid or expired token', async () => {

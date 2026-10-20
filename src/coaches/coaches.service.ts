@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { CoachRole, type Coach } from '@prisma/client';
@@ -35,32 +36,49 @@ export class CoachesService {
   }
 
   /**
-   * ADMIN-only: invite a brand-new coach/business. There is no public
-   * self-signup and no Coach row is created here -- that would leave a
-   * half-formed account sitting in the DB (email+name, no password) for
-   * however long it takes the invite to be accepted. Instead this only
-   * mints a signed, purpose-scoped token (same pattern as the Google OAuth
-   * connect state -- see TokenService) carrying the email+name, and emails
-   * it to that address, pointing at `frontendUrl` (the coach's own site,
-   * which the admin provides here since there's no other way for the
-   * backend to know it -- see CONTEXT.md's "Booking email links, per
-   * coach"). The Coach row -- email, name, AND password together -- is only
-   * created once the invite is redeemed (see acceptInvite()).
+   * ADMIN-only: invite a brand-new coach/business to one of her own already
+   * allow-listed origins (see AllowedOrigin/#35 -- the admin picks an
+   * existing one rather than typing a URL freehand, so an invite can only
+   * ever point at a real, known site). There is no public self-signup and
+   * no Coach row is created here -- that would leave a half-formed account
+   * sitting in the DB (email+name, no password) for however long it takes
+   * the invite to be accepted. Instead this only mints a signed,
+   * purpose-scoped token (same pattern as the Google OAuth connect state --
+   * see TokenService) carrying the email+name+frontendUrl, and emails it to
+   * that address. The Coach row -- email, name, password, AND frontendUrl
+   * together -- is only created once the invite is redeemed (see
+   * acceptInvite()).
    *
-   * Calling this again for the same email before it's accepted (e.g. the
-   * first email got lost) just mints and sends a fresh link -- nothing is
-   * persisted here, so there's nothing to collide with or clean up.
+   * Rejected if `frontendUrl` isn't a known AllowedOrigin, if it already
+   * belongs to another coach (one coach per site -- see Coach.frontendUrl),
+   * or if `email` already belongs to a coach. Calling this again for the
+   * same email+site before it's accepted (e.g. the first email got lost)
+   * just mints and sends a fresh link -- nothing is persisted here, so
+   * there's nothing to collide with or clean up.
    */
   async invite(dto: InviteCoachDto): Promise<void> {
-    const existing = await this.prisma.coach.findUnique({
+    const existingCoach = await this.prisma.coach.findUnique({
       where: { email: dto.email },
     });
-    if (existing) {
+    if (existingCoach) {
       throw new ConflictException('A coach with that email already exists');
+    }
+    const allowedOrigin = await this.prisma.allowedOrigin.findUnique({
+      where: { origin: dto.frontendUrl },
+    });
+    if (!allowedOrigin) {
+      throw new NotFoundException('That site is not an allowed origin');
+    }
+    const coachForSite = await this.prisma.coach.findUnique({
+      where: { frontendUrl: dto.frontendUrl },
+    });
+    if (coachForSite) {
+      throw new ConflictException('This site already has a coach assigned');
     }
     const token = this.tokenService.signCoachInviteToken({
       email: dto.email,
       name: dto.name,
+      frontendUrl: dto.frontendUrl,
     });
     await this.coachInviteEmailService.sendInvite(
       dto.email,
@@ -68,27 +86,35 @@ export class CoachesService {
       dto.frontendUrl,
       token,
     );
-    this.logger.log(`Invite sent to ${dto.email}`);
+    this.logger.log(`Invite sent to ${dto.email} for ${dto.frontendUrl}`);
   }
 
   /**
    * Public (no auth -- the coach doesn't exist yet): verifies the invite
-   * token and creates the Coach row for the first time, with email+name
-   * (carried in the token) and password (just set) all together. Returns
-   * an access token too, same shape as login(), so the frontend can log
-   * the coach straight in instead of making them log in again right after.
+   * token and creates the Coach row for the first time, with
+   * email+name+frontendUrl (carried in the token) and password (just set)
+   * all together. The `Coach.frontendUrl @unique` constraint is what makes
+   * this race-safe against two accept-invite calls for the same site: if
+   * another invite to the same site was accepted first in the meantime,
+   * this create hits a unique-constraint violation, which the global
+   * PrismaExceptionFilter turns into a 409 (see common/prisma-exception.
+   * filter.ts) instead of silently creating a second coach for that site.
+   * Returns an access token too, same shape as login(), so the frontend can
+   * log the coach straight in instead of making them log in again right
+   * after.
    */
   async acceptInvite(
     dto: AcceptInviteDto,
   ): Promise<{ accessToken: string; coach: Coach }> {
-    const { email, name } = this.tokenService.verifyCoachInviteToken(dto.token);
+    const { email, name, frontendUrl } =
+      this.tokenService.verifyCoachInviteToken(dto.token);
     const existing = await this.prisma.coach.findUnique({ where: { email } });
     if (existing) {
       throw new ConflictException('This invite has already been used');
     }
     const passwordHash = await this.passwordService.hash(dto.password);
     const coach = await this.prisma.coach.create({
-      data: { email, name, passwordHash, role: CoachRole.COACH },
+      data: { email, name, passwordHash, frontendUrl, role: CoachRole.COACH },
     });
     this.logger.log(`Coach ${coach.id} (${coach.email}) created via invite`);
     const accessToken = this.tokenService.sign({
