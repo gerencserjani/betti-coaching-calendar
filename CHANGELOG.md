@@ -1,3 +1,9 @@
+# [1.17.0](https://github.com/gerencserjani/coach-calendar/compare/v1.16.0...v1.17.0) (2026-10-20)
+
+### Features
+
+- stamp bookings with their creating request's origin, drop FRONTEND_URL (refs [#32](https://github.com/gerencserjani/coach-calendar/issues/32)) ([83bc122](https://github.com/gerencserjani/coach-calendar/commit/83bc1226675b2cec3b335c3ec3b29636e2cc204e))
+
 # [1.16.0](https://github.com/gerencserjani/coach-calendar/compare/v1.15.0...v1.16.0) (2026-10-20)
 
 ### Features
