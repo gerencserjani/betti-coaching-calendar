@@ -1,3 +1,13 @@
+# [1.15.0](https://github.com/gerencserjani/coach-calendar/compare/v1.14.0...v1.15.0) (2026-10-20)
+
+### Bug Fixes
+
+- restore missing Logger in BookingsService (merge main) ([c01e308](https://github.com/gerencserjani/coach-calendar/commit/c01e308adc05b993ebcd8df015996d8c450e52c7)), closes [#5](https://github.com/gerencserjani/coach-calendar/issues/5) [#30](https://github.com/gerencserjani/coach-calendar/issues/30) [#5](https://github.com/gerencserjani/coach-calendar/issues/5)
+
+### Features
+
+- add self-service password change for coaches (refs [#31](https://github.com/gerencserjani/coach-calendar/issues/31)) ([98d74a0](https://github.com/gerencserjani/coach-calendar/commit/98d74a0acb77d1df67eb909cc82b3ce508bd0de9))
+
 # [1.14.0](https://github.com/gerencserjani/coach-calendar/compare/v1.13.0...v1.14.0) (2026-10-20)
 
 ### Bug Fixes
