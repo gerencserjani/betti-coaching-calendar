@@ -2,6 +2,17 @@
 
 Single-context glossary and data-model map for this repo (see `docs/agents/domain.md` for how agent skills consume this file). Kept up to date at the end of each multi-tenant migration task -- this is the one place to look to see the current shape of the hierarchy and what's still pending.
 
+## Standing decision: one Tenant = one Coach, always
+
+Decided explicitly: every `Coach` is its own fully independent business. A `Tenant` will never have more than one `Coach` under it -- the earlier "studio with several coaches, one OWNER managing them" idea (#15) is rejected, not just deferred (see #15's closing comment).
+
+**Not yet acted on in code**, but this makes two already-shipped pieces effectively dead weight, worth simplifying away whenever this is next touched:
+
+- The `OWNER` role and its account-management logic (`assertCanManageCoach`, the tenant-scoped branches of `CoachesService.findAll`/`create`/`revokeSessions`) -- an OWNER would never have another `COACH` in its own tenant to manage.
+- `AvailabilityService.assertNoCrossCoachConflictForDate`/`ForWeekday` -- "other coaches in my tenant" is now always an empty set, so these checks can never actually find a conflict.
+
+**Still open, not yet decided:** whether to collapse `Tenant` and `Coach` into one table (removes the `tenantId` indirection everywhere -- `Settings`/`GoogleIntegration`/`Settings.emailFrom` would key directly on `coachId`) or keep them as two tables with a 1:1 invariant enforced instead (less migration churn, keeps the already-built per-tenant extension-table pattern). Ask before picking one -- it changes the shape of every table below.
+
 ## Glossary
 
 - **Tenant** -- one independent coaching business. The top-level isolation boundary: everything else hangs off a `tenantId`, directly or (for resources owned by a specific `Coach`) transitively.
@@ -64,16 +75,16 @@ erDiagram
 
 Tracked as GitHub issues in this repo; update this table as each lands.
 
-| Area                                                                                       | Status     | Issue |
-| ------------------------------------------------------------------------------------------ | ---------- | ----- |
-| `Tenant` entity, `Coach.tenantId`, `OWNER` role, cross-coach availability-conflict scoping | ✅ Done    | #11   |
-| Per-tenant `Settings`                                                                      | ✅ Done    | #12   |
-| Per-tenant Google Calendar integration (one shared Google account per tenant)              | ✅ Done    | #2    |
-| Tenant-aware email sending (Gmail fallback + per-tenant Resend once a domain is verified)  | ✅ Done    | #13   |
-| Tenant-aware `FRONTEND_URL`/domain resolution                                              | ⏳ Pending | #14   |
-| Multiple coach-users per tenant beyond ADMIN/OWNER/COACH (future idea)                     | 💭 Idea    | #15   |
-| Guest/client user accounts for booking (future idea)                                       | 💭 Idea    | #16   |
-| Tenant/coach id on queued notification jobs, for log observability                         | ⏳ Pending | #17   |
+| Area                                                                                       | Status      | Issue |
+| ------------------------------------------------------------------------------------------ | ----------- | ----- |
+| `Tenant` entity, `Coach.tenantId`, `OWNER` role, cross-coach availability-conflict scoping | ✅ Done     | #11   |
+| Per-tenant `Settings`                                                                      | ✅ Done     | #12   |
+| Per-tenant Google Calendar integration (one shared Google account per tenant)              | ✅ Done     | #2    |
+| Tenant-aware email sending (Gmail fallback + per-tenant Resend once a domain is verified)  | ✅ Done     | #13   |
+| Tenant-aware `FRONTEND_URL`/domain resolution                                              | ⏳ Pending  | #14   |
+| Multiple coach-users per tenant beyond ADMIN/OWNER/COACH                                   | ❌ Rejected | #15   |
+| Guest/client user accounts for booking (future idea)                                       | 💭 Idea     | #16   |
+| Tenant/coach id on queued notification jobs, for log observability                         | ⏳ Pending  | #17   |
 
 **Current real-world state:** the one existing tenant hasn't verified a Resend domain yet (`Settings.emailFrom` is null), so it's still sending through the Gmail fallback -- this is expected, not a bug. Once a domain is verified at resend.com and `Settings.emailFrom` is set for that tenant, its emails switch over automatically.
 
