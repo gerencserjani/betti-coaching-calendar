@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { escapeHtml } from '../common/html.util.js';
 import { EmailService } from '../notifications/email.service.js';
 
 /**
@@ -41,12 +42,4 @@ export class CoachInviteEmailService {
       html,
     });
   }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

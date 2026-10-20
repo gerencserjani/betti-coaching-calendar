@@ -21,10 +21,20 @@ const GOOGLE_CONNECT_STATE_PURPOSE = 'google-connect';
 // standing way into the account indefinitely.
 const COACH_INVITE_TTL = '7d';
 const COACH_INVITE_PURPOSE = 'coach-invite';
+// Short: a password-reset link is meant to be used right away, and unlike
+// the invite link, the account already exists and works fine without it --
+// no reason to leave a long-lived credential-recovery link valid.
+const PASSWORD_RESET_TTL = '1h';
+const PASSWORD_RESET_PURPOSE = 'password-reset';
 
 interface GoogleConnectStatePayload {
   sub: string;
   purpose: typeof GOOGLE_CONNECT_STATE_PURPOSE;
+}
+
+interface PasswordResetPayload {
+  sub: string;
+  purpose: typeof PASSWORD_RESET_PURPOSE;
 }
 
 export interface CoachInvitePayload {
@@ -127,5 +137,34 @@ export class TokenService {
       name: payload.name,
       frontendUrl: payload.frontendUrl,
     };
+  }
+
+  // Proves that whoever is submitting a new password actually received the
+  // reset email sent to that coach's own address -- see AuthService.
+  // forgotPassword()/resetPassword(). Same signed, purpose-scoped pattern
+  // as the Google connect state above; carries just the coachId since,
+  // unlike the invite token, the Coach already exists.
+  signPasswordResetToken(coachId: string): string {
+    const { jwtSecret } = this.configService.get<AppConfig>('app')!;
+    const payload: PasswordResetPayload = {
+      sub: coachId,
+      purpose: PASSWORD_RESET_PURPOSE,
+    };
+    return jwt.sign(payload, jwtSecret, { expiresIn: PASSWORD_RESET_TTL });
+  }
+
+  /** Returns the coachId carried in the token (see signPasswordResetToken). */
+  verifyPasswordResetToken(token: string): string {
+    const { jwtSecret } = this.configService.get<AppConfig>('app')!;
+    let payload: PasswordResetPayload;
+    try {
+      payload = jwt.verify(token, jwtSecret) as unknown as PasswordResetPayload;
+    } catch {
+      throw new UnauthorizedException('Invalid or expired reset link');
+    }
+    if (payload.purpose !== PASSWORD_RESET_PURPOSE) {
+      throw new UnauthorizedException('Invalid or expired reset link');
+    }
+    return payload.sub;
   }
 }

@@ -386,4 +386,75 @@ describe('App (e2e)', () => {
       expect(replay.status).toBe(409);
     });
   });
+
+  describe('forgot password -> reset flow', () => {
+    it('lets a coach reset her password end to end, revoking her old session', async () => {
+      const coach = await createTestCoach({
+        email: 'forgetful@example.com',
+        password: 'the-old-password',
+        frontendUrl: 'https://forgetful-coach.example.com',
+      });
+      const oldLogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'forgetful@example.com', password: 'the-old-password' });
+      expect(oldLogin.status).toBe(201);
+
+      const forgot = await request(app.getHttpServer())
+        .post('/auth/forgot-password')
+        .send({ email: 'forgetful@example.com' });
+      expect(forgot.status).toBe(204);
+
+      const { html } = fakeEmailService.sendRaw.mock.calls[0][0] as {
+        html: string;
+      };
+      expect(html).toContain('forgetful-coach.example.com');
+      const token = new URL(
+        /href="([^"]+)"/.exec(html)![1].replace(/&amp;/g, '&'),
+      ).searchParams.get('token')!;
+
+      const reset = await request(app.getHttpServer())
+        .post('/auth/reset-password')
+        .send({ token, newPassword: 'a-brand-new-password' });
+      expect(reset.status).toBe(201);
+      expect(reset.body.coach.email).toBe('forgetful@example.com');
+
+      // The session from before the reset no longer works.
+      const staleSession = await request(app.getHttpServer())
+        .get('/coaches/me')
+        .set('Authorization', `Bearer ${oldLogin.body.accessToken}`);
+      expect(staleSession.status).toBe(401);
+
+      // The access token the reset itself returned, issued after the
+      // revocation timestamp, still works.
+      const freshSession = await request(app.getHttpServer())
+        .get('/coaches/me')
+        .set('Authorization', `Bearer ${reset.body.accessToken}`);
+      expect(freshSession.status).toBe(200);
+      expect(freshSession.body.id).toBe(coach.id);
+
+      const relogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'forgetful@example.com',
+          password: 'a-brand-new-password',
+        });
+      expect(relogin.status).toBe(201);
+    });
+
+    it('responds identically (204, no email sent) for an email with no account -- no enumeration', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/forgot-password')
+        .send({ email: 'no-such-coach@example.com' });
+
+      expect(res.status).toBe(204);
+      expect(fakeEmailService.sendRaw).not.toHaveBeenCalled();
+    });
+
+    it('rejects an invalid or expired reset token', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/reset-password')
+        .send({ token: 'not-a-real-token', newPassword: 'whatever123' });
+      expect(res.status).toBe(401);
+    });
+  });
 });
