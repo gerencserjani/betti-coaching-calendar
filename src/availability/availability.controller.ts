@@ -6,12 +6,15 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentCoach } from '../auth/current-coach.decorator.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import type { Coach } from '@prisma/client';
+import { OptionalCoachIdQueryDto } from '../common/dto/optional-coach-id-query.dto.js';
+import { resolveCoachScope } from '../common/ownership.util.js';
 import { AvailabilityOverrideService } from './availability-override.service.js';
 import { CreateAvailabilityOverrideDto } from './dto/create-availability-override.dto.js';
 import { CreateWeeklyAvailabilityDto } from './dto/create-weekly-availability.dto.js';
@@ -30,8 +33,13 @@ export class AvailabilityController {
   ) {}
 
   @Get('weekly')
-  findMyWeekly(@CurrentCoach() coach: Coach) {
-    return this.weeklyService.findForCoach(coach.id);
+  findMyWeekly(
+    @CurrentCoach() coach: Coach,
+    @Query() query: OptionalCoachIdQueryDto,
+  ) {
+    return this.weeklyService.findForCoach(
+      resolveCoachScope(coach, query.coachId),
+    );
   }
 
   @Post('weekly')
@@ -57,8 +65,13 @@ export class AvailabilityController {
   }
 
   @Get('overrides')
-  findMyOverrides(@CurrentCoach() coach: Coach) {
-    return this.overrideService.findForCoach(coach.id);
+  findMyOverrides(
+    @CurrentCoach() coach: Coach,
+    @Query() query: OptionalCoachIdQueryDto,
+  ) {
+    return this.overrideService.findForCoach(
+      resolveCoachScope(coach, query.coachId),
+    );
   }
 
   @Post('overrides')

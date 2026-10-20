@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -12,6 +13,7 @@ import { Throttle } from '@nestjs/throttler';
 import { CurrentCoach } from '../auth/current-coach.decorator.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import type { Coach } from '@prisma/client';
+import { OptionalCoachIdQueryDto } from '../common/dto/optional-coach-id-query.dto.js';
 import { BookingsService } from './bookings.service.js';
 import {
   ClientCancelBookingDto,
@@ -28,8 +30,11 @@ export class BookingsController {
   @ApiBearerAuth()
   @Get()
   @UseGuards(JwtAuthGuard)
-  findAll() {
-    return this.bookingsService.findAll();
+  findAll(
+    @CurrentCoach() coach: Coach,
+    @Query() query: OptionalCoachIdQueryDto,
+  ) {
+    return this.bookingsService.findAll(coach, query.coachId);
   }
 
   // Public: the client-facing booking form. Tighter than the app default --

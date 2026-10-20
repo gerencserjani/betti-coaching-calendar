@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { jest } from '@jest/globals';
@@ -339,6 +340,79 @@ describe('BookingsService (integration)', () => {
       await expect(
         service.cancelByCoach(otherCoach, booking.id, { reason: 'not mine' }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('findAll', () => {
+    it("never returns another coach's bookings to a plain coach", async () => {
+      await service.create(createDto());
+      const otherCoach = await createTestCoach();
+      const otherEventType = await createTestEventType(otherCoach.id, {
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+      });
+      await createFullWeekAvailability(otherCoach.id);
+      await service.create(
+        createDto({
+          eventTypeId: otherEventType.id,
+          startAt: futureAt(11).toISO()!,
+        }),
+      );
+
+      const result = await service.findAll(coach);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.coachId).toBe(coach.id);
+    });
+
+    it("rejects a coach's request for another coach's bookings via coachId", async () => {
+      const otherCoach = await createTestCoach();
+      await expect(service.findAll(coach, otherCoach.id)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('lets an admin see every coach when no coachId is given', async () => {
+      await service.create(createDto());
+      const admin = await createTestCoach({ role: CoachRole.ADMIN });
+      const otherCoach = await createTestCoach();
+      const otherEventType = await createTestEventType(otherCoach.id, {
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+      });
+      await createFullWeekAvailability(otherCoach.id);
+      await service.create(
+        createDto({
+          eventTypeId: otherEventType.id,
+          startAt: futureAt(11).toISO()!,
+        }),
+      );
+
+      const result = await service.findAll(admin);
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('lets an admin scope to one coach via coachId', async () => {
+      await service.create(createDto());
+      const admin = await createTestCoach({ role: CoachRole.ADMIN });
+      const otherCoach = await createTestCoach();
+      const otherEventType = await createTestEventType(otherCoach.id, {
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+      });
+      await createFullWeekAvailability(otherCoach.id);
+      await service.create(
+        createDto({
+          eventTypeId: otherEventType.id,
+          startAt: futureAt(11).toISO()!,
+        }),
+      );
+
+      const result = await service.findAll(admin, otherCoach.id);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.coachId).toBe(otherCoach.id);
     });
   });
 
