@@ -1,3 +1,9 @@
+# [1.20.0](https://github.com/gerencserjani/coach-calendar/compare/v1.19.0...v1.20.0) (2026-10-20)
+
+### Features
+
+- self-service forgot/reset password ([#42](https://github.com/gerencserjani/coach-calendar/issues/42)) ([a7beb5e](https://github.com/gerencserjani/coach-calendar/commit/a7beb5ee480358de97ce71a25f04a7514403735c))
+
 # [1.19.0](https://github.com/gerencserjani/coach-calendar/compare/v1.18.0...v1.19.0) (2026-10-20)
 
 ### Features
