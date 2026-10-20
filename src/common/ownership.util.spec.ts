@@ -1,6 +1,9 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CoachRole, type Coach } from '@prisma/client';
-import { assertCoachOwnsOrIsAdmin } from './ownership.util.js';
+import {
+  assertCoachOwnsOrIsAdmin,
+  resolveCoachScope,
+} from './ownership.util.js';
 
 function makeCoach(overrides: Partial<Coach> = {}): Coach {
   return {
@@ -43,5 +46,34 @@ describe('assertCoachOwnsOrIsAdmin', () => {
     expect(() => assertCoachOwnsOrIsAdmin(coach, null, 'missing row')).toThrow(
       NotFoundException,
     );
+  });
+});
+
+describe('resolveCoachScope', () => {
+  it('resolves a coach with no requested override to their own id', () => {
+    const coach = makeCoach({ id: 'coach-1' });
+    expect(resolveCoachScope(coach)).toBe('coach-1');
+  });
+
+  it('resolves a coach whose requested coachId matches their own', () => {
+    const coach = makeCoach({ id: 'coach-1' });
+    expect(resolveCoachScope(coach, 'coach-1')).toBe('coach-1');
+  });
+
+  it('rejects a coach requesting a different coachId', () => {
+    const coach = makeCoach({ id: 'coach-1' });
+    expect(() => resolveCoachScope(coach, 'coach-2')).toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('resolves an admin with no override to their own id', () => {
+    const admin = makeCoach({ id: 'admin-1', role: CoachRole.ADMIN });
+    expect(resolveCoachScope(admin)).toBe('admin-1');
+  });
+
+  it('lets an admin name any coachId', () => {
+    const admin = makeCoach({ id: 'admin-1', role: CoachRole.ADMIN });
+    expect(resolveCoachScope(admin, 'coach-2')).toBe('coach-2');
   });
 });

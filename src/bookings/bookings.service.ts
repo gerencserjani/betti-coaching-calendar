@@ -13,6 +13,7 @@ import type { MinuteRange } from '../availability/availability.types.js';
 import {
   BookingStatus,
   CancelledBy,
+  CoachRole,
   LocationType,
   Prisma,
   type Coach,
@@ -23,7 +24,10 @@ import { NotificationJobsService } from '../jobs/notification-jobs.service.js';
 import type { BookingWithRelations } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { runSerializable } from '../common/serializable-transaction.util.js';
-import { assertCoachOwnsOrIsAdmin } from '../common/ownership.util.js';
+import {
+  assertCoachOwnsOrIsAdmin,
+  resolveCoachScope,
+} from '../common/ownership.util.js';
 import { SettingsService } from '../settings/settings.service.js';
 import type {
   ClientCancelBookingDto,
@@ -48,11 +52,28 @@ export class BookingsService {
     private readonly i18n: I18nService,
   ) {}
 
-  async findAll(): Promise<BookingWithRelations[]> {
-    return this.prisma.booking.findMany({
+  // A plain COACH is always pinned to their own bookings -- `coachId` here
+  // can only narrow an ADMIN's view to one coach, never widen a COACH's.
+  // ADMIN with no `coachId` keeps the long-standing "see everything"
+  // default (there's no single coachId to fall back to for an admin who
+  // isn't a specific coach's own site).
+  async findAll(
+    coach: Coach,
+    coachId?: string,
+  ): Promise<BookingWithRelations[]> {
+    const scopedCoachId =
+      coach.role === CoachRole.ADMIN
+        ? coachId
+        : resolveCoachScope(coach, coachId);
+    const bookings = await this.prisma.booking.findMany({
+      where: scopedCoachId ? { coachId: scopedCoachId } : undefined,
       include: BOOKING_INCLUDE,
       orderBy: { startAt: 'asc' },
     });
+    this.logger.log(
+      `Listed ${bookings.length} booking(s) for ${coach.role} ${coach.id}${scopedCoachId ? ` (scoped to coach ${scopedCoachId})` : ' (all coaches)'}`,
+    );
+    return bookings;
   }
 
   async findByManageToken(token: string): Promise<BookingWithRelations> {
