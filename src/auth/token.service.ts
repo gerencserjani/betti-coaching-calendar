@@ -16,10 +16,24 @@ export interface AccessTokenPayload {
 const TOKEN_TTL = '30d';
 const GOOGLE_CONNECT_STATE_TTL = '5m';
 const GOOGLE_CONNECT_STATE_PURPOSE = 'google-connect';
+// Long enough that a coach who doesn't check email immediately isn't
+// locked out, short enough that a stale, unused invite doesn't stay a
+// standing way into the account indefinitely.
+const COACH_INVITE_TTL = '7d';
+const COACH_INVITE_PURPOSE = 'coach-invite';
 
 interface GoogleConnectStatePayload {
   sub: string;
   purpose: typeof GOOGLE_CONNECT_STATE_PURPOSE;
+}
+
+export interface CoachInvitePayload {
+  email: string;
+  name: string;
+}
+
+interface CoachInviteTokenPayload extends CoachInvitePayload {
+  purpose: typeof COACH_INVITE_PURPOSE;
 }
 
 @Injectable()
@@ -74,5 +88,37 @@ export class TokenService {
       throw new UnauthorizedException('Invalid or expired connect link');
     }
     return payload.sub;
+  }
+
+  // Carries the would-be coach's own email+name -- there is no Coach row
+  // yet at invite time (see CoachesService.invite()); the Coach only comes
+  // into existence once this token is redeemed via acceptInvite(), which is
+  // what makes email+name+password always land together, atomically. Same
+  // signed, purpose-scoped pattern as the Google connect state above.
+  signCoachInviteToken(payload: CoachInvitePayload): string {
+    const { jwtSecret } = this.configService.get<AppConfig>('app')!;
+    const tokenPayload: CoachInviteTokenPayload = {
+      ...payload,
+      purpose: COACH_INVITE_PURPOSE,
+    };
+    return jwt.sign(tokenPayload, jwtSecret, { expiresIn: COACH_INVITE_TTL });
+  }
+
+  /** Returns the email+name carried in the token (see signCoachInviteToken). */
+  verifyCoachInviteToken(token: string): CoachInvitePayload {
+    const { jwtSecret } = this.configService.get<AppConfig>('app')!;
+    let payload: CoachInviteTokenPayload;
+    try {
+      payload = jwt.verify(
+        token,
+        jwtSecret,
+      ) as unknown as CoachInviteTokenPayload;
+    } catch {
+      throw new UnauthorizedException('Invalid or expired invite link');
+    }
+    if (payload.purpose !== COACH_INVITE_PURPOSE) {
+      throw new UnauthorizedException('Invalid or expired invite link');
+    }
+    return { email: payload.email, name: payload.name };
   }
 }

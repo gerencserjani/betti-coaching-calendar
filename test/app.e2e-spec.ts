@@ -36,6 +36,7 @@ describe('App (e2e)', () => {
   let app: INestApplication;
   const fakeEmailService = {
     send: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    sendRaw: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
   };
 
   beforeAll(async () => {
@@ -66,6 +67,8 @@ describe('App (e2e)', () => {
 
   beforeEach(async () => {
     await resetDatabase();
+    fakeEmailService.send.mockClear();
+    fakeEmailService.sendRaw.mockClear();
   });
 
   it('GET /health returns ok', async () => {
@@ -224,7 +227,7 @@ describe('App (e2e)', () => {
   });
 
   describe('role-gated route', () => {
-    it('rejects a non-admin coach creating a new coach', async () => {
+    it('rejects a non-admin coach inviting a new coach', async () => {
       await createTestCoach({
         email: 'plain-coach@example.com',
         password: 'correct-password',
@@ -243,13 +246,13 @@ describe('App (e2e)', () => {
         .send({
           email: 'new-coach@example.com',
           name: 'New',
-          password: 'a-real-password',
+          frontendUrl: 'https://new-coach.example.com',
         });
 
       expect(res.status).toBe(403);
     });
 
-    it('lets an admin coach create a new coach', async () => {
+    it('lets an admin coach invite a new coach, without creating a Coach row yet', async () => {
       await createTestCoach({
         email: 'admin@example.com',
         password: 'correct-password',
@@ -265,12 +268,70 @@ describe('App (e2e)', () => {
         .send({
           email: 'new-coach@example.com',
           name: 'New',
-          password: 'a-real-password',
+          frontendUrl: 'https://new-coach.example.com',
         });
 
-      expect(res.status).toBe(201);
-      expect(res.body.email).toBe('new-coach@example.com');
-      expect(res.body.passwordHash).toBeUndefined();
+      expect(res.status).toBe(204);
+      expect(fakeEmailService.sendRaw).toHaveBeenCalledTimes(1);
+
+      const created = await request(app.getHttpServer())
+        .get('/coaches')
+        .set('Authorization', `Bearer ${login.body.accessToken}`);
+      expect(
+        created.body.some(
+          (c: { email: string }) => c.email === 'new-coach@example.com',
+        ),
+      ).toBe(false);
+    });
+  });
+
+  describe('coach invite -> accept flow', () => {
+    it('lets an invited coach set their password and log in, end to end', async () => {
+      await createTestCoach({
+        email: 'admin2@example.com',
+        password: 'correct-password',
+        role: CoachRole.ADMIN,
+      });
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'admin2@example.com', password: 'correct-password' });
+
+      await request(app.getHttpServer())
+        .post('/coaches')
+        .set('Authorization', `Bearer ${login.body.accessToken}`)
+        .send({
+          email: 'invited@example.com',
+          name: 'Invited Coach',
+          frontendUrl: 'https://invited-coach.example.com',
+        });
+
+      const { html } = fakeEmailService.sendRaw.mock.calls[0][0] as {
+        html: string;
+      };
+      const token = new URL(
+        /href="([^"]+)"/.exec(html)![1].replace(/&amp;/g, '&'),
+      ).searchParams.get('token')!;
+
+      const accepted = await request(app.getHttpServer())
+        .post('/coaches/accept-invite')
+        .send({ token, password: 'a-brand-new-password' });
+
+      expect(accepted.status).toBe(201);
+      expect(accepted.body.coach.email).toBe('invited@example.com');
+      expect(accepted.body.accessToken).toBeDefined();
+
+      const relogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'invited@example.com',
+          password: 'a-brand-new-password',
+        });
+      expect(relogin.status).toBe(201);
+
+      const replay = await request(app.getHttpServer())
+        .post('/coaches/accept-invite')
+        .send({ token, password: 'another-password' });
+      expect(replay.status).toBe(409);
     });
   });
 });

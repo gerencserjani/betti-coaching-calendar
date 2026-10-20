@@ -5,10 +5,10 @@ import { Resend } from 'resend';
 import type { AppConfig } from '../config/configuration.js';
 import type { BookingEmailProps } from './templates/BookingEmail.js';
 
-export interface SendEmailInput {
+interface DeliverInput {
   to: string;
   subject: string;
-  props: BookingEmailProps;
+  html: string;
   icsContent?: string;
   icsFilename?: string;
   /**
@@ -17,6 +17,22 @@ export interface SendEmailInput {
    * verified a domain in Resend yet, so this send falls back to the
    * shared Gmail sender below (see class doc).
    */
+  from?: string | null;
+}
+
+export interface SendEmailInput {
+  to: string;
+  subject: string;
+  props: BookingEmailProps;
+  icsContent?: string;
+  icsFilename?: string;
+  from?: string | null;
+}
+
+export interface SendRawEmailInput {
+  to: string;
+  subject: string;
+  html: string;
   from?: string | null;
 }
 
@@ -63,7 +79,16 @@ export class EmailService {
       import('./templates/BookingEmail.js'),
     ]);
     const html = await render(BookingEmail(input.props));
+    await this.deliver({ ...input, html });
+  }
 
+  /** Same Gmail-or-Resend delivery as send(), for a plain, pre-rendered HTML email -- not tied to the booking template (see CoachInviteEmailService). */
+  async sendRaw(input: SendRawEmailInput): Promise<void> {
+    await this.deliver(input);
+  }
+
+  private async deliver(input: DeliverInput): Promise<void> {
+    const { html } = input;
     if (input.from) {
       await this.sendViaResend(input.from, input, html);
       return;
@@ -88,7 +113,7 @@ export class EmailService {
 
   private async sendViaResend(
     from: string,
-    input: SendEmailInput,
+    input: DeliverInput,
     html: string,
   ): Promise<void> {
     if (!this.resend) {
