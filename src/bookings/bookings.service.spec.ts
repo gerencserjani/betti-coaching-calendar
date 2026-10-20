@@ -287,7 +287,7 @@ describe('BookingsService (integration)', () => {
 
       await service.cancelByClient(booking.manageToken, {});
       expect(googleCalendarService.deleteEvent).toHaveBeenCalledWith(
-        coach.tenantId,
+        coach.id,
         'existing-event-id',
       );
     });
@@ -388,7 +388,7 @@ describe('BookingsService (integration)', () => {
       );
 
       expect(googleCalendarService.deleteEvent).toHaveBeenCalledWith(
-        coach.tenantId,
+        coach.id,
         'fake-event-id',
       );
       expect(rescheduled.meetLink).toBe('https://meet.google.com/new-link');

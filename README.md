@@ -129,7 +129,7 @@ migrate deploy`/`dev`, `prisma studio`) -- DDL isn't reliable through a
 - **`JWT_SECRET`** — signs the app's own login tokens (see "Auth" below).
   32+ random characters; generate with `openssl rand -base64 32`.
 - **`GMAIL_USER` / `GMAIL_APP_PASSWORD` / `EMAIL_FROM`** — the default/
-  fallback sender, used by any tenant that hasn't verified its own domain
+  fallback sender, used by any coach that hasn't verified its own domain
   (see `RESEND_API_KEY` just below). Sent through Gmail's own SMTP,
   authenticated as a real Gmail account: a third-party email API (Resend,
   SendGrid, …) can never send _from_ a `@gmail.com` address — only Google's
@@ -141,11 +141,11 @@ migrate deploy`/`dev`, `prisma studio`) -- DDL isn't reliable through a
   `EMAIL_FROM` must be `GMAIL_USER` itself, or a "Send mail as" alias
   configured on that account — Gmail SMTP rejects/rewrites a From address it
   doesn't recognize. Gmail's sending limit is ~500/day on a regular account,
-  shared across every tenant still on this fallback.
-- **`RESEND_API_KEY`** — optional. Once set, a tenant can verify its own
+  shared across every coach still on this fallback.
+- **`RESEND_API_KEY`** — optional. Once set, a coach can verify its own
   sending domain at [resend.com](https://resend.com) (free tier: 3,000
   emails/month, 3 verified domains) and set `Settings.emailFrom` (via
-  `PATCH /settings`) to a `"Name <address>"` at that domain — that tenant's
+  `PATCH /settings`) to a `"Name <address>"` at that domain — that coach's
   emails then go out through Resend as its own business, instead of the
   shared Gmail fallback above. See `EmailService` for the per-send
   Resend-vs-Gmail decision.

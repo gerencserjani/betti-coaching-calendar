@@ -25,10 +25,10 @@ export class GoogleCalendarService {
    * time, so previous clients can never re-enter or linger in an old room.
    */
   async createMeetEvent(
-    tenantId: string,
+    coachId: string,
     input: CreateMeetEventInput,
   ): Promise<MeetEventResult> {
-    const auth = await this.oauthService.getAuthenticatedClient(tenantId);
+    const auth = await this.oauthService.getAuthenticatedClient(coachId);
     const calendar = createCalendarClient({ version: 'v3', auth });
 
     const { data } = await calendar.events.insert({
@@ -63,8 +63,8 @@ export class GoogleCalendarService {
     return { eventId: data.id, meetLink };
   }
 
-  async deleteEvent(tenantId: string, eventId: string): Promise<void> {
-    const auth = await this.oauthService.getAuthenticatedClient(tenantId);
+  async deleteEvent(coachId: string, eventId: string): Promise<void> {
+    const auth = await this.oauthService.getAuthenticatedClient(coachId);
     const calendar = createCalendarClient({ version: 'v3', auth });
     await calendar.events
       .delete({ calendarId: 'primary', eventId, sendUpdates: 'none' })

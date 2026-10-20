@@ -33,7 +33,7 @@ export class NotificationsService {
   ) {}
 
   async notifyBookingConfirmed(booking: BookingWithRelations): Promise<void> {
-    const settings = await this.settingsService.get(booking.coach.tenantId);
+    const settings = await this.settingsService.get(booking.coachId);
     const ctx = await this.buildContext(booking, settings);
     await Promise.all([
       this.sendTo('client', 'confirmed', booking, ctx, settings.emailFrom),
@@ -42,7 +42,7 @@ export class NotificationsService {
   }
 
   async notifyBookingCancelled(booking: BookingWithRelations): Promise<void> {
-    const settings = await this.settingsService.get(booking.coach.tenantId);
+    const settings = await this.settingsService.get(booking.coachId);
     const ctx = await this.buildContext(booking, settings);
     await Promise.all([
       this.sendTo('client', 'cancelled', booking, ctx, settings.emailFrom),
@@ -51,7 +51,7 @@ export class NotificationsService {
   }
 
   async notifyBookingRescheduled(booking: BookingWithRelations): Promise<void> {
-    const settings = await this.settingsService.get(booking.coach.tenantId);
+    const settings = await this.settingsService.get(booking.coachId);
     const ctx = await this.buildContext(booking, settings);
     await Promise.all([
       this.sendTo('client', 'rescheduled', booking, ctx, settings.emailFrom),

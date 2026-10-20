@@ -31,7 +31,6 @@ export class SlotsService {
   async computeSlots(query: QuerySlotsDto): Promise<Slot[]> {
     const eventType = await this.prisma.eventType.findUnique({
       where: { id: query.eventTypeId },
-      include: { coach: { select: { tenantId: true } } },
     });
     if (!eventType || !eventType.isActive) {
       throw new NotFoundException(
@@ -39,7 +38,7 @@ export class SlotsService {
       );
     }
 
-    const settings = await this.settingsService.get(eventType.coach.tenantId);
+    const settings = await this.settingsService.get(eventType.coachId);
     const timezone = settings.businessTimezone;
 
     const from = DateTime.fromISO(query.from, { zone: timezone }).startOf(

@@ -42,27 +42,17 @@ async function main() {
   const email = await rl.question('Admin email: ');
   const name = await rl.question('Admin name: ');
   const password = await rl.question('Admin password (min 8 chars): ');
-  const businessName = await rl.question(
-    'Business/tenant name (e.g. "Betti Coaching"): ',
-  );
   rl.close();
 
   if (password.length < 8) {
     throw new Error('Password must be at least 8 characters.');
   }
 
-  // Every Coach needs a Tenant (see backend issue #11) -- ADMIN is a
-  // cross-tenant "super admin" role, so which tenant this row points at
-  // doesn't affect what the admin can see/do, but the column is still
-  // required, so a fresh tenant is created here either way.
-  const tenant = await prisma.tenant.create({ data: { name: businessName } });
-
   const passwordHash = await bcrypt.hash(password, 12);
   const admin = await prisma.coach.create({
-    data: { email, name, passwordHash, role: 'ADMIN', tenantId: tenant.id },
+    data: { email, name, passwordHash, role: 'ADMIN' },
   });
   console.log(`\nCreated admin: ${admin.email} (id: ${admin.id})`);
-  console.log(`Created tenant: ${tenant.name} (id: ${tenant.id})`);
 }
 
 main()

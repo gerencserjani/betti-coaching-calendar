@@ -71,7 +71,6 @@ export class BookingsService {
   async create(dto: CreateBookingDto): Promise<BookingWithRelations> {
     const eventType = await this.prisma.eventType.findUnique({
       where: { id: dto.eventTypeId },
-      include: { coach: true },
     });
     if (!eventType || !eventType.isActive) {
       throw new NotFoundException(
@@ -84,7 +83,7 @@ export class BookingsService {
       );
     }
 
-    const settings = await this.settingsService.get(eventType.coach.tenantId);
+    const settings = await this.settingsService.get(eventType.coachId);
     const timezone = settings.businessTimezone;
 
     const startAt = DateTime.fromISO(dto.startAt, { setZone: true });
@@ -145,7 +144,7 @@ export class BookingsService {
     const booking = await this.findByManageToken(token);
     this.assertConfirmed(booking, booking.locale);
     await this.assertWithinNoticeWindow(
-      booking.coach.tenantId,
+      booking.coachId,
       booking.startAt,
       booking.locale,
     );
@@ -191,12 +190,12 @@ export class BookingsService {
     const booking = await this.findByManageToken(token);
     this.assertConfirmed(booking, booking.locale);
     await this.assertWithinNoticeWindow(
-      booking.coach.tenantId,
+      booking.coachId,
       booking.startAt,
       booking.locale,
     );
 
-    const settings = await this.settingsService.get(booking.coach.tenantId);
+    const settings = await this.settingsService.get(booking.coachId);
     const timezone = settings.businessTimezone;
 
     const startAt = DateTime.fromISO(dto.startAt, { setZone: true });
@@ -238,7 +237,7 @@ export class BookingsService {
     if (updated.location === LocationType.GOOGLE_MEET) {
       if (updated.googleEventId) {
         await this.googleCalendarService.deleteEvent(
-          updated.coach.tenantId,
+          updated.coachId,
           updated.googleEventId,
         );
         // Clear the now-dangling reference before attempting to create the
@@ -270,7 +269,7 @@ export class BookingsService {
   ): Promise<BookingWithRelations> {
     if (booking.googleEventId) {
       await this.googleCalendarService.deleteEvent(
-        booking.coach.tenantId,
+        booking.coachId,
         booking.googleEventId,
       );
     }
@@ -292,7 +291,7 @@ export class BookingsService {
   ): Promise<BookingWithRelations> {
     try {
       const meet = await this.googleCalendarService.createMeetEvent(
-        booking.coach.tenantId,
+        booking.coachId,
         {
           title: `${booking.eventType.title} — ${booking.clientName}`,
           description: booking.clientNote ?? undefined,
@@ -346,11 +345,11 @@ export class BookingsService {
   }
 
   private async assertWithinNoticeWindow(
-    tenantId: string,
+    coachId: string,
     startAt: Date,
     locale: string,
   ): Promise<void> {
-    const settings = await this.settingsService.get(tenantId);
+    const settings = await this.settingsService.get(coachId);
     const cutoff = DateTime.now().plus({
       hours: settings.cancellationNoticeHours,
     });

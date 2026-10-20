@@ -33,9 +33,9 @@ export class GoogleOAuthService {
   private newOAuthClient(): OAuth2Client {
     const { google: googleConfig } = this.configService.get<AppConfig>('app')!;
     // One registered OAuth app (GOOGLE_CLIENT_ID/SECRET) for the whole
-    // platform, shared across every tenant's connection -- this is not
-    // tenant-specific data, same as e.g. a "Sign in with Google" SaaS
-    // using one OAuth app for many end users' own Google accounts.
+    // platform, shared across every coach's own connection -- this isn't
+    // per-coach data, same as e.g. a "Sign in with Google" SaaS using one
+    // OAuth app for many end users' own Google accounts.
     return new OAuth2Client(
       googleConfig.clientId,
       googleConfig.clientSecret,
@@ -53,7 +53,7 @@ export class GoogleOAuthService {
     });
   }
 
-  async handleCallback(code: string, tenantId: string): Promise<void> {
+  async handleCallback(code: string, coachId: string): Promise<void> {
     if (!code) {
       throw new BadRequestException('Missing authorization code');
     }
@@ -71,9 +71,9 @@ export class GoogleOAuthService {
 
     const { encryptionKey } = this.configService.get<AppConfig>('app')!;
     await this.prisma.googleIntegration.upsert({
-      where: { tenantId },
+      where: { coachId },
       create: {
-        tenantId,
+        coachId,
         refreshTokenEncrypted: encrypt(tokens.refresh_token, encryptionKey),
         connectedEmail: userInfo.email ?? 'unknown',
       },
@@ -84,19 +84,19 @@ export class GoogleOAuthService {
       },
     });
     // Worth its own log line regardless of level: this changes which Google
-    // account every future Meet-link booking for this tenant is created in.
+    // account every future Meet-link booking for this coach is created in.
     this.logger.log(
-      `Google Calendar connected for tenant ${tenantId}: ${userInfo.email ?? 'unknown'}`,
+      `Google Calendar connected for coach ${coachId}: ${userInfo.email ?? 'unknown'}`,
     );
   }
 
-  async status(tenantId: string): Promise<{
+  async status(coachId: string): Promise<{
     connected: boolean;
     connectedEmail?: string;
     connectedAt?: Date;
   }> {
     const integration = await this.prisma.googleIntegration.findUnique({
-      where: { tenantId },
+      where: { coachId },
     });
     if (!integration) {
       return { connected: false };
@@ -108,9 +108,9 @@ export class GoogleOAuthService {
     };
   }
 
-  async getAuthenticatedClient(tenantId: string): Promise<OAuth2Client> {
+  async getAuthenticatedClient(coachId: string): Promise<OAuth2Client> {
     const integration = await this.prisma.googleIntegration.findUnique({
-      where: { tenantId },
+      where: { coachId },
     });
     if (!integration) {
       throw new ServiceUnavailableException(

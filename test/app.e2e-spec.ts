@@ -106,7 +106,9 @@ describe('App (e2e)', () => {
         password: 'correct-password',
       });
 
-      const unauthorized = await request(app.getHttpServer()).get('/coaches');
+      const unauthorized = await request(app.getHttpServer()).get(
+        '/coaches/me',
+      );
       expect(unauthorized.status).toBe(401);
 
       const login = await request(app.getHttpServer())
@@ -118,10 +120,10 @@ describe('App (e2e)', () => {
       const token = login.body.accessToken as string;
 
       const authorized = await request(app.getHttpServer())
-        .get('/coaches')
+        .get('/coaches/me')
         .set('Authorization', `Bearer ${token}`);
       expect(authorized.status).toBe(200);
-      expect(Array.isArray(authorized.body)).toBe(true);
+      expect(authorized.body.email).toBe('e2e-coach2@example.com');
     });
   });
 

@@ -43,15 +43,14 @@ export class TokenService {
   // Short-lived, purpose-scoped token used to prove that the Google OAuth
   // connect/callback round trip (which can't carry an Authorization header,
   // since it's a full-page browser navigation through Google's consent
-  // screen) was actually initiated by an authenticated admin/owner, not by
+  // screen) was actually initiated by an authenticated coach, not by
   // anyone who stumbles onto or directly constructs the connect/callback
-  // URLs. Carries the initiating tenantId (not a coachId): the Google
-  // integration itself is tenant-scoped (see #2), and this is how
-  // /callback knows which tenant's GoogleIntegration row to upsert.
-  signGoogleConnectState(tenantId: string): string {
+  // URLs. Carries the initiating coachId -- this is how /callback knows
+  // which coach's GoogleIntegration row to upsert.
+  signGoogleConnectState(coachId: string): string {
     const { jwtSecret } = this.configService.get<AppConfig>('app')!;
     const payload: GoogleConnectStatePayload = {
-      sub: tenantId,
+      sub: coachId,
       purpose: GOOGLE_CONNECT_STATE_PURPOSE,
     };
     return jwt.sign(payload, jwtSecret, {
@@ -59,7 +58,7 @@ export class TokenService {
     });
   }
 
-  /** Returns the tenantId carried in the token (see signGoogleConnectState). */
+  /** Returns the coachId carried in the token (see signGoogleConnectState). */
   verifyGoogleConnectState(token: string): string {
     const { jwtSecret } = this.configService.get<AppConfig>('app')!;
     let payload: GoogleConnectStatePayload;
