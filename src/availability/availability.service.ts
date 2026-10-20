@@ -1,8 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { type MinuteRange, rangesOverlap } from './availability.types.js';
+import type { MinuteRange } from './availability.types.js';
 
 /** Whatever DB client a conflict check runs against: the plain PrismaService for
  * a one-off read, or a Prisma.TransactionClient when the read must be
@@ -144,80 +144,5 @@ export class AvailabilityService {
         range.startMinute <= candidate.startMinute &&
         range.endMinute >= candidate.endMinute,
     );
-  }
-
-  /**
-   * Throws if `candidate` overlaps any OTHER coach's effective range on
-   * `isoDate`. Pass `client` when called from inside a SERIALIZABLE
-   * transaction that also performs the write this check is gating, so the
-   * read and the write are isolated against a concurrent equivalent request.
-   *
-   * "Other coach" means another coach on the same shared calendar -- i.e.
-   * the same tenant. Without the tenantId filter, this would incorrectly
-   * check a candidate slot against every coach in the database, including
-   * ones belonging to an entirely different, unrelated business.
-   */
-  async assertNoCrossCoachConflictForDate(
-    coachId: string,
-    tenantId: string,
-    isoDate: string,
-    timezone: string,
-    candidate: MinuteRange,
-    client: DbClient = this.prisma,
-  ): Promise<void> {
-    const otherCoaches = await client.coach.findMany({
-      where: { id: { not: coachId }, tenantId },
-      select: { id: true, name: true },
-    });
-
-    for (const other of otherCoaches) {
-      const ranges = await this.getEffectiveRangesForDate(
-        other.id,
-        isoDate,
-        timezone,
-        client,
-      );
-      if (ranges.some((range) => rangesOverlap(range, candidate))) {
-        throw new ConflictException(
-          `Overlaps with ${other.name}'s availability on ${isoDate}. Only one coach may be on the shared calendar at a time.`,
-        );
-      }
-    }
-  }
-
-  /**
-   * Throws if `candidate` overlaps any OTHER coach's recurring weekly
-   * schedule for the same weekday. See assertNoCrossCoachConflictForDate
-   * above for why `client` matters, and for why `tenantId` must scope
-   * "other coach" to the same shared calendar.
-   */
-  async assertNoCrossCoachConflictForWeekday(
-    coachId: string,
-    tenantId: string,
-    weekday: number,
-    candidate: MinuteRange,
-    client: DbClient = this.prisma,
-  ): Promise<void> {
-    const otherCoachesWeekly = await client.weeklyAvailability.findMany({
-      where: {
-        coachId: { not: coachId },
-        weekday,
-        coach: { tenantId },
-      },
-      include: { coach: { select: { name: true } } },
-    });
-
-    const conflict = otherCoachesWeekly.find((w) =>
-      rangesOverlap(
-        { startMinute: w.startMinute, endMinute: w.endMinute },
-        candidate,
-      ),
-    );
-
-    if (conflict) {
-      throw new ConflictException(
-        `Overlaps with ${conflict.coach.name}'s weekly schedule on weekday ${weekday}. Only one coach may be on the shared calendar at a time.`,
-      );
-    }
   }
 }

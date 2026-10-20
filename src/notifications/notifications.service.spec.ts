@@ -48,9 +48,9 @@ describe('NotificationsService (integration)', () => {
     await resetDatabase();
     coach = await createTestCoach();
     await testPrisma.settings.upsert({
-      where: { tenantId: coach.tenantId },
+      where: { coachId: coach.id },
       create: {
-        tenantId: coach.tenantId,
+        coachId: coach.id,
         businessAddress: 'Budapest, Teszt utca 1.',
       },
       update: { businessAddress: 'Budapest, Teszt utca 1.' },

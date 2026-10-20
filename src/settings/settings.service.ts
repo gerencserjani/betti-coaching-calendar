@@ -7,37 +7,37 @@ import type { UpdateSettingsDto } from './dto/update-settings.dto.js';
 export class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async get(tenantId: string): Promise<Settings> {
+  async get(coachId: string): Promise<Settings> {
     return this.prisma.settings.upsert({
-      where: { tenantId },
-      create: { tenantId },
+      where: { coachId },
+      create: { coachId },
       update: {},
     });
   }
 
-  async update(tenantId: string, dto: UpdateSettingsDto): Promise<Settings> {
-    await this.get(tenantId);
+  async update(coachId: string, dto: UpdateSettingsDto): Promise<Settings> {
+    await this.get(coachId);
     return this.prisma.settings.update({
-      where: { tenantId },
+      where: { coachId },
       data: dto,
     });
   }
 
   /**
    * Stopgap for the public, unauthenticated GET /settings endpoint (see
-   * SettingsController): an anonymous request has no tenant to resolve yet
-   * -- there's no domain/subdomain-based tenant resolution mechanism (see
-   * backend issue #14). Returns whichever tenant was created first, which
-   * is only correct as long as there's exactly one tenant. MUST be
-   * replaced by real tenant resolution before a second tenant goes live.
+   * SettingsController): an anonymous request has no coach to resolve yet
+   * -- there's no domain/subdomain-based resolution mechanism (see backend
+   * issue #14). Returns whichever coach was created first, which is only
+   * correct as long as there's exactly one website/coach live. MUST be
+   * replaced by real domain-based resolution before a second one goes live.
    */
   async getForPublicRequest(): Promise<Settings> {
-    const tenant = await this.prisma.tenant.findFirst({
+    const coach = await this.prisma.coach.findFirst({
       orderBy: { createdAt: 'asc' },
     });
-    if (!tenant) {
-      throw new ServiceUnavailableException('No tenant configured yet');
+    if (!coach) {
+      throw new ServiceUnavailableException('No coach configured yet');
     }
-    return this.get(tenant.id);
+    return this.get(coach.id);
   }
 }

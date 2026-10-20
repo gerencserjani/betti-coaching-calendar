@@ -1,91 +1,75 @@
 # Domain context: betti-coaching-calendar
 
-Single-context glossary and data-model map for this repo (see `docs/agents/domain.md` for how agent skills consume this file). Kept up to date at the end of each multi-tenant migration task -- this is the one place to look to see the current shape of the hierarchy and what's still pending.
+Single-context glossary and data-model map for this repo (see `docs/agents/domain.md` for how agent skills consume this file). Kept up to date as the data model evolves -- this is the one place to look to see the current shape of the hierarchy.
 
-## Standing decision: one Tenant = one Coach, always
+## Standing decision: one website = one Coach, always
 
-Decided explicitly: every `Coach` is its own fully independent business. A `Tenant` will never have more than one `Coach` under it -- the earlier "studio with several coaches, one OWNER managing them" idea (#15) is rejected, not just deferred (see #15's closing comment).
+Every `Coach` is its own fully independent business -- there is no separate "tenant" or "studio" grouping above it, and there never will be (the earlier idea of a studio with several coaches sharing one tenant, managed by an `OWNER`, was explicitly rejected -- see backend issue #15's closing comment).
 
-**Not yet acted on in code**, but this makes two already-shipped pieces effectively dead weight, worth simplifying away whenever this is next touched:
-
-- The `OWNER` role and its account-management logic (`assertCanManageCoach`, the tenant-scoped branches of `CoachesService.findAll`/`create`/`revokeSessions`) -- an OWNER would never have another `COACH` in its own tenant to manage.
-- `AvailabilityService.assertNoCrossCoachConflictForDate`/`ForWeekday` -- "other coaches in my tenant" is now always an empty set, so these checks can never actually find a conflict.
-
-**Still open, not yet decided:** whether to collapse `Tenant` and `Coach` into one table (removes the `tenantId` indirection everywhere -- `Settings`/`GoogleIntegration`/`Settings.emailFrom` would key directly on `coachId`) or keep them as two tables with a 1:1 invariant enforced instead (less migration churn, keeps the already-built per-tenant extension-table pattern). Ask before picking one -- it changes the shape of every table below.
+This used to be modeled as two tables (`Tenant` + `Coach`, 1:1), introduced while multi-coach-per-business was still an open question. Once that was ruled out, `Tenant` was merged back into `Coach` -- `Settings` and `GoogleIntegration` now key directly on `coachId`, and the `OWNER` role (and the cross-coach availability-conflict checks it motivated) was removed as dead weight.
 
 ## Glossary
 
-- **Tenant** -- one independent coaching business. The top-level isolation boundary: everything else hangs off a `tenantId`, directly or (for resources owned by a specific `Coach`) transitively.
-- **Coach** -- a person who can be booked, and who may also hold account-management rights over other coaches in the same tenant. Always belongs to exactly one `Tenant`. Three roles:
-  - **ADMIN** -- cross-tenant "super admin". Sees/manages every tenant's data. Not scoped by its own `tenantId`.
-  - **OWNER** -- tenant-scoped manager. Same account-management actions as ADMIN (create a coach, revoke a coach's sessions) but only for `COACH`-role coaches within its own tenant, and never another coach's calendar/event types/availability/bookings. Also themselves a bookable `COACH`.
-  - **COACH** -- plain bookable coach. No management rights over other coaches.
+- **Coach** -- both the bookable person AND the whole business: one website, one `Coach` row. Two roles:
+  - **ADMIN** -- cross-platform "super admin". Sees/manages every Coach's data. Not scoped to its own account for authorization purposes.
+  - **COACH** -- a single business's own account. Manages only its own calendar/event types/settings/bookings.
 - **EventType** -- a bookable service a `Coach` offers (title, duration, locations, price). Scoped by `coachId`.
 - **Booking** -- a client's appointment against one `EventType`/`Coach`. Scoped by `coachId`.
-- **Settings** -- a `Tenant`'s business profile (address, cancellation-notice window, timezone). One row per tenant.
-- **GoogleIntegration** -- the Google account used to mint Meet links for bookings. One row per `Tenant`, shared by every coach on it -- deliberately tenant-scoped, not coach-scoped, because coaches on one tenant already share one calendar (see the cross-coach availability-conflict rule). The platform's own OAuth app (`GOOGLE_CLIENT_ID`/`SECRET`) stays global, shared across every tenant's connection.
-- **Email sending** -- two mechanisms, chosen per send by `EmailService`: Gmail SMTP (the original mechanism, shared across every tenant that hasn't set up its own) is the default/fallback; Resend is used instead once a tenant verifies its own domain and sets `Settings.emailFrom`. Resend's free tier covers 3 verified domains (3,000 emails/month) -- a paid tier would be needed beyond that.
+- **Settings** -- a `Coach`'s business profile (address, cancellation-notice window, timezone). One row per coach.
+- **GoogleIntegration** -- the Google account used to mint Meet links for a `Coach`'s bookings. One row per coach. The platform's own OAuth app (`GOOGLE_CLIENT_ID`/`SECRET`) stays global, shared across every coach's own connection -- same pattern as e.g. a "Sign in with Google" SaaS using one OAuth app for many end users' own Google accounts.
+- **Email sending** -- two mechanisms, chosen per send by `EmailService`: Gmail SMTP (the original mechanism, shared across every coach that hasn't set up their own) is the default/fallback; Resend is used instead once a coach verifies their own domain and sets `Settings.emailFrom`. Resend's free tier covers 3 verified domains (3,000 emails/month) -- a paid tier would be needed beyond that.
 
 ## Hierarchy
 
 ```mermaid
 erDiagram
-    TENANT ||--o{ COACH : "has"
-    TENANT ||--|| SETTINGS : "has"
-    TENANT ||--|| GOOGLE_INTEGRATION : "has"
     COACH ||--o{ EVENT_TYPE : "offers"
     COACH ||--o{ BOOKING : "is booked for"
     COACH ||--o{ WEEKLY_AVAILABILITY : "sets"
     COACH ||--o{ AVAILABILITY_OVERRIDE : "sets"
+    COACH ||--|| SETTINGS : "has"
+    COACH ||--|| GOOGLE_INTEGRATION : "has"
     EVENT_TYPE ||--o{ BOOKING : "is booked as"
 
-    TENANT {
-        string id
-        string name
-    }
     COACH {
         string id
-        string tenantId
-        string role "ADMIN | OWNER | COACH"
+        string name
+        string role "ADMIN | COACH"
     }
     SETTINGS {
-        string tenantId
+        string coachId
         string businessAddress
         int cancellationNoticeHours
         string businessTimezone
+        string emailFrom
     }
     GOOGLE_INTEGRATION {
-        string tenantId
+        string coachId
         string connectedEmail
     }
 ```
 
 ## Role reach, at a glance
 
-| Action                                                            | ADMIN        | OWNER                                 | COACH      |
-| ----------------------------------------------------------------- | ------------ | ------------------------------------- | ---------- |
-| View/manage own calendar, event types, availability               | own only     | own only                              | own only   |
-| View/manage **another coach's** calendar/event types/availability | any tenant   | never                                 | never      |
-| Create a coach account / revoke a coach's sessions                | any tenant   | own tenant, `COACH`-role targets only | never      |
-| View the tenant's coach roster                                    | every tenant | own tenant                            | own tenant |
-| Update tenant Settings (address/timezone/cancellation policy)     | any tenant   | own tenant                            | never      |
-| Connect/check the tenant's Google Calendar integration            | any tenant   | own tenant                            | never      |
+| Action                                                        | ADMIN     | COACH    |
+| ------------------------------------------------------------- | --------- | -------- |
+| View/manage own calendar, event types, availability, settings | own only  | own only |
+| View/manage **another coach's** calendar/event types/settings | any coach | never    |
+| Create a coach account / revoke a coach's sessions / list all | yes       | never    |
+| Update own Settings / connect own Google Calendar             | yes       | yes      |
 
-## Migration status (multi-tenant rollout)
+## Backend issue tracker
 
-Tracked as GitHub issues in this repo; update this table as each lands.
+| Area                                                                                    | Status      | Issue |
+| --------------------------------------------------------------------------------------- | ----------- | ----- |
+| Per-coach Settings                                                                      | ✅ Done     | #12   |
+| Per-coach Google Calendar integration                                                   | ✅ Done     | #2    |
+| Coach-aware email sending (Gmail fallback + per-coach Resend once a domain is verified) | ✅ Done     | #13   |
+| Domain-based resolution for the public, unauthenticated endpoints                       | ⏳ Pending  | #14   |
+| Multiple coaches sharing one business account                                           | ❌ Rejected | #15   |
+| Guest/client user accounts for booking (future idea)                                    | 💭 Idea     | #16   |
+| Coach id on queued notification jobs, for log observability                             | ⏳ Pending  | #17   |
 
-| Area                                                                                       | Status      | Issue |
-| ------------------------------------------------------------------------------------------ | ----------- | ----- |
-| `Tenant` entity, `Coach.tenantId`, `OWNER` role, cross-coach availability-conflict scoping | ✅ Done     | #11   |
-| Per-tenant `Settings`                                                                      | ✅ Done     | #12   |
-| Per-tenant Google Calendar integration (one shared Google account per tenant)              | ✅ Done     | #2    |
-| Tenant-aware email sending (Gmail fallback + per-tenant Resend once a domain is verified)  | ✅ Done     | #13   |
-| Tenant-aware `FRONTEND_URL`/domain resolution                                              | ⏳ Pending  | #14   |
-| Multiple coach-users per tenant beyond ADMIN/OWNER/COACH                                   | ❌ Rejected | #15   |
-| Guest/client user accounts for booking (future idea)                                       | 💭 Idea     | #16   |
-| Tenant/coach id on queued notification jobs, for log observability                         | ⏳ Pending  | #17   |
+**Current real-world state:** the one existing coach hasn't verified a Resend domain yet (`Settings.emailFrom` is null), so it's still sending through the Gmail fallback -- this is expected, not a bug. Once a domain is verified at resend.com and `Settings.emailFrom` is set, email switches over automatically.
 
-**Current real-world state:** the one existing tenant hasn't verified a Resend domain yet (`Settings.emailFrom` is null), so it's still sending through the Gmail fallback -- this is expected, not a bug. Once a domain is verified at resend.com and `Settings.emailFrom` is set for that tenant, its emails switch over automatically.
-
-**Known gap until #14 ships:** slots and booking creation/cancel/reschedule already resolve the right tenant correctly (they always carry an `eventTypeId`/`manageToken`, which leads straight to a specific coach and its `tenantId` -- no stopgap needed there). The real gap is the two endpoints with **no** booking/event-type context at all: the public event-types catalog (`EventTypesService.findActive()` returns every tenant's event types mixed together, unfiltered) and `GET /settings` (`SettingsService.getForPublicRequest()` -- an explicit, documented stopgap that returns "whichever tenant exists first"). Both need real domain-based tenant resolution from #14. **Don't onboard a second tenant before #14 ships.**
+**Known gap until #14 ships:** slots and booking creation/cancel/reschedule already resolve the right coach correctly (they always carry an `eventTypeId`/`manageToken`, which leads straight to a specific coach). The real gap is the two endpoints with **no** booking/event-type context at all: the public event-types catalog (`EventTypesService.findActive()`) and `GET /settings` (`SettingsService.getForPublicRequest()` -- an explicit, documented stopgap that returns "whichever coach was created first", correct only as long as there's exactly one website live). Both need real domain-based resolution from #14 before a second website goes live on this backend.
