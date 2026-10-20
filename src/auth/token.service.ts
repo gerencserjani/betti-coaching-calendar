@@ -35,6 +35,16 @@ interface GoogleConnectStatePayload {
 interface PasswordResetPayload {
   sub: string;
   purpose: typeof PASSWORD_RESET_PURPOSE;
+  /** Set by jsonwebtoken itself on sign, read back on verify -- lets
+   * resetPassword() reject a token issued before Coach.sessionsRevokedAt,
+   * which is what makes a reset link single-use (see AuthService.
+   * resetPassword's own comment). */
+  iat?: number;
+}
+
+export interface PasswordResetTokenPayload {
+  coachId: string;
+  iat: number;
 }
 
 export interface CoachInvitePayload {
@@ -153,8 +163,8 @@ export class TokenService {
     return jwt.sign(payload, jwtSecret, { expiresIn: PASSWORD_RESET_TTL });
   }
 
-  /** Returns the coachId carried in the token (see signPasswordResetToken). */
-  verifyPasswordResetToken(token: string): string {
+  /** Returns the coachId + iat carried in the token (see signPasswordResetToken). */
+  verifyPasswordResetToken(token: string): PasswordResetTokenPayload {
     const { jwtSecret } = this.configService.get<AppConfig>('app')!;
     let payload: PasswordResetPayload;
     try {
@@ -162,9 +172,12 @@ export class TokenService {
     } catch {
       throw new UnauthorizedException('Invalid or expired reset link');
     }
-    if (payload.purpose !== PASSWORD_RESET_PURPOSE) {
+    if (
+      payload.purpose !== PASSWORD_RESET_PURPOSE ||
+      payload.iat === undefined
+    ) {
       throw new UnauthorizedException('Invalid or expired reset link');
     }
-    return payload.sub;
+    return { coachId: payload.sub, iat: payload.iat };
   }
 }

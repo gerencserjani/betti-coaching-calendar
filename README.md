@@ -216,7 +216,9 @@ Instead:
   none, e.g. the seeded ADMIN). `POST /auth/reset-password` (public; body:
   `token`, `newPassword`) verifies the token, sets the password, revokes
   every session issued before the reset, and returns an access token (same
-  shape as login) so the frontend can log the coach straight back in.
+  shape as login) so the frontend can log the coach straight back in. The
+  link is single-use — replaying it is rejected the same way a revoked
+  access token is.
 
 `passwordHash` is also stripped from every JSON response as a defense-in-depth
 measure (`StripPasswordHashInterceptor`, registered globally in `main.ts`),
