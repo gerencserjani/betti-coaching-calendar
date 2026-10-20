@@ -154,5 +154,21 @@ describe('AuthService (integration)', () => {
         service.resetPassword({ token: 'not-a-real-token', newPassword: 'x' }),
       ).rejects.toThrow(UnauthorizedException);
     });
+
+    it('rejects replaying the same reset token a second time', async () => {
+      const coach = await createTestCoach({ email: 'coach@example.com' });
+      const token = tokenService.signPasswordResetToken(coach.id);
+
+      await service.resetPassword({ token, newPassword: 'first-new-password' });
+
+      await expect(
+        service.resetPassword({ token, newPassword: 'second-new-password' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      // The first reset's password is still the one in effect.
+      await expect(
+        service.login('coach@example.com', 'first-new-password'),
+      ).resolves.toBeDefined();
+    });
   });
 });

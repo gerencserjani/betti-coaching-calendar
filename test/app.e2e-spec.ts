@@ -439,6 +439,12 @@ describe('App (e2e)', () => {
           password: 'a-brand-new-password',
         });
       expect(relogin.status).toBe(201);
+
+      // The same reset link can't be replayed to overwrite the password again.
+      const replay = await request(app.getHttpServer())
+        .post('/auth/reset-password')
+        .send({ token, newPassword: 'yet-another-password' });
+      expect(replay.status).toBe(401);
     });
 
     it('responds identically (204, no email sent) for an email with no account -- no enumeration', async () => {

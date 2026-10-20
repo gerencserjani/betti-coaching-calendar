@@ -84,16 +84,33 @@ export class AuthService {
    * possibly-compromised session should stop working too). Returns an
    * access token, same shape as login(), so the frontend can log the coach
    * straight back in.
+   *
+   * The reset token itself has no separate "used" flag -- unlike an invite
+   * token (naturally single-use, since redeeming it is what creates the
+   * Coach a replay would then fail to find again), this coach already
+   * exists both before and after, so nothing stops it being replayed
+   * otherwise. Instead, this reuses `sessionsRevokedAt` -- the same field
+   * this method itself bumps on every successful reset -- as the "used"
+   * marker: a token issued before the coach's current `sessionsRevokedAt`
+   * is rejected, exactly like JwtAuthGuard already does for access tokens.
    */
   async resetPassword(
     dto: ResetPasswordDto,
   ): Promise<{ accessToken: string; coach: Coach }> {
-    const coachId = this.tokenService.verifyPasswordResetToken(dto.token);
+    const { coachId, iat } = this.tokenService.verifyPasswordResetToken(
+      dto.token,
+    );
     const coach = await this.prisma.coach.findUnique({
       where: { id: coachId },
     });
     if (!coach) {
       throw new UnauthorizedException('Invalid or expired reset link');
+    }
+    if (
+      coach.sessionsRevokedAt &&
+      iat * 1000 < coach.sessionsRevokedAt.getTime()
+    ) {
+      throw new UnauthorizedException('This reset link has already been used');
     }
     const passwordHash = await this.passwordService.hash(dto.newPassword);
     const sessionsRevokedAt = new Date();
