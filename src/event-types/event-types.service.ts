@@ -13,11 +13,10 @@ import type { UpdateEventTypeDto } from './dto/update-event-type.dto.js';
 export class EventTypesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Public catalog: every active event type, for the client-facing booking UI. */
-  findActive(): Promise<EventType[]> {
+  /** Public catalog: every active event type for one coach, for the client-facing booking UI. */
+  findActive(coachId: string): Promise<EventType[]> {
     return this.prisma.eventType.findMany({
-      where: { isActive: true },
-      include: { coach: { select: { id: true, name: true } } },
+      where: { isActive: true, coachId },
       orderBy: [{ position: 'asc' }, { title: 'asc' }],
     });
   }
@@ -30,15 +29,16 @@ export class EventTypesService {
   }
 
   async create(coach: Coach, dto: CreateEventTypeDto): Promise<EventType> {
-    const position = dto.position ?? (await this.nextPosition());
+    const position = dto.position ?? (await this.nextPosition(coach.id));
     return this.prisma.eventType.create({
       data: { ...dto, position, coachId: coach.id },
     });
   }
 
-  /** Appends new event types to the end of the shared catalog's display order by default. */
-  private async nextPosition(): Promise<number> {
+  /** Appends new event types to the end of this coach's own display order by default. */
+  private async nextPosition(coachId: string): Promise<number> {
     const last = await this.prisma.eventType.aggregate({
+      where: { coachId },
       _max: { position: true },
     });
     return (last._max.position ?? -1) + 1;

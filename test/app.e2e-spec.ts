@@ -191,7 +191,7 @@ describe('App (e2e)', () => {
       expect(res.body.length).toBeGreaterThan(0);
     });
 
-    it('lists active event types publicly, without leaking archived or another coach data shape', async () => {
+    it("lists one coach's active event types publicly, without leaking archived or another coach's catalog", async () => {
       const coach = await createTestCoach();
       await createTestEventType(coach.id, {
         title: 'Active One',
@@ -201,12 +201,25 @@ describe('App (e2e)', () => {
         title: 'Archived One',
         isActive: false,
       });
+      const otherCoach = await createTestCoach();
+      await createTestEventType(otherCoach.id, {
+        title: 'Other Coach Active',
+        isActive: true,
+      });
 
-      const res = await request(app.getHttpServer()).get('/event-types');
+      const res = await request(app.getHttpServer())
+        .get('/event-types')
+        .query({ coachId: coach.id });
       expect(res.status).toBe(200);
       const titles = res.body.map((e: { title: string }) => e.title);
       expect(titles).toContain('Active One');
       expect(titles).not.toContain('Archived One');
+      expect(titles).not.toContain('Other Coach Active');
+    });
+
+    it('rejects GET /event-types with no coachId', async () => {
+      const res = await request(app.getHttpServer()).get('/event-types');
+      expect(res.status).toBe(400);
     });
   });
 
