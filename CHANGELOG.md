@@ -1,3 +1,9 @@
+# [1.16.0](https://github.com/gerencserjani/coach-calendar/compare/v1.15.0...v1.16.0) (2026-10-20)
+
+### Features
+
+- store CORS allowed origins in DB, manageable from coach-admin (refs [#35](https://github.com/gerencserjani/coach-calendar/issues/35)) ([030d0f1](https://github.com/gerencserjani/coach-calendar/commit/030d0f1bd10ee25d1afb963ff76196ed833fb946))
+
 # [1.15.0](https://github.com/gerencserjani/coach-calendar/compare/v1.14.0...v1.15.0) (2026-10-20)
 
 ### Bug Fixes
