@@ -208,6 +208,16 @@ Instead:
     separate, coach-agnostic CORS allow-list — `invite()` only reads it to
     validate the URL, there's no foreign key between the two tables.
 
+- **Forgotten password**: `POST /auth/forgot-password` (public; body:
+  `email`) always returns `204` — silently, whether or not that email has an
+  account, so it can't be used to enumerate which emails exist. For a real
+  account, it emails a 1-hour reset link built from `coach.frontendUrl`
+  (falling back to the request's own Origin/Referer header for a coach with
+  none, e.g. the seeded ADMIN). `POST /auth/reset-password` (public; body:
+  `token`, `newPassword`) verifies the token, sets the password, revokes
+  every session issued before the reset, and returns an access token (same
+  shape as login) so the frontend can log the coach straight back in.
+
 `passwordHash` is also stripped from every JSON response as a defense-in-depth
 measure (`StripPasswordHashInterceptor`, registered globally in `main.ts`),
 so it can never leak even from an endpoint that includes a `coach` relation.
