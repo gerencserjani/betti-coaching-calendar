@@ -132,7 +132,11 @@ export class BookingsService {
       booking = await this.attachFreshMeetLink(booking, dto.locale);
     }
 
-    await this.notificationJobsService.enqueue(booking.id, 'confirmed');
+    await this.notificationJobsService.enqueue(
+      booking.id,
+      booking.coachId,
+      'confirmed',
+    );
 
     return booking;
   }
@@ -154,7 +158,11 @@ export class BookingsService {
       CancelledBy.CLIENT,
       dto.reason,
     );
-    await this.notificationJobsService.enqueue(updated.id, 'cancelled');
+    await this.notificationJobsService.enqueue(
+      updated.id,
+      updated.coachId,
+      'cancelled',
+    );
     return updated;
   }
 
@@ -179,7 +187,11 @@ export class BookingsService {
       CancelledBy.COACH,
       dto.reason,
     );
-    await this.notificationJobsService.enqueue(updated.id, 'cancelled');
+    await this.notificationJobsService.enqueue(
+      updated.id,
+      updated.coachId,
+      'cancelled',
+    );
     return updated;
   }
 
@@ -257,7 +269,11 @@ export class BookingsService {
       });
     }
 
-    await this.notificationJobsService.enqueue(updated.id, 'rescheduled');
+    await this.notificationJobsService.enqueue(
+      updated.id,
+      updated.coachId,
+      'rescheduled',
+    );
 
     return updated;
   }
