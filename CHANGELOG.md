@@ -1,3 +1,9 @@
+# [1.13.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.12.0...v1.13.0) (2026-10-20)
+
+### Features
+
+- carry coachId on queued notification jobs for log observability ([46e09ea](https://github.com/gerencserjani/betti-coaching-calendar/commit/46e09ea2042c562608d6269d769b45d12db4512a))
+
 # [1.12.0](https://github.com/gerencserjani/betti-coaching-calendar/compare/v1.11.0...v1.12.0) (2026-10-20)
 
 ### Features
