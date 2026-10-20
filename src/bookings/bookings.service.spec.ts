@@ -139,6 +139,19 @@ describe('BookingsService (integration)', () => {
       );
     });
 
+    it("stamps the booking with the creating request's origin", async () => {
+      const booking = await service.create(
+        createDto(),
+        'https://betti-coaching.vercel.app',
+      );
+      expect(booking.originUrl).toBe('https://betti-coaching.vercel.app');
+    });
+
+    it('leaves originUrl null when none was given (e.g. a non-browser caller)', async () => {
+      const booking = await service.create(createDto());
+      expect(booking.originUrl).toBeNull();
+    });
+
     it('does not create the Google Meet link synchronously for a GOOGLE_MEET booking -- that happens in the notification job', async () => {
       const booking = await service.create(
         createDto({ location: LocationType.GOOGLE_MEET }),

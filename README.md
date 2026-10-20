@@ -419,8 +419,6 @@ traffic against an old schema.
   tooling (`mysql2`/`deepmerge-ts`, pulled in even though we only use
   Postgres) — not reachable from the running app. `npm audit fix --force`
   would downgrade Prisma to 6.x; not done here on purpose.
-- The frontend needs a page at `${FRONTEND_URL}/bookings/manage?token=...`
-  (linked from emails) for clients to view/cancel/reschedule their booking.
 
 ## Releases
 

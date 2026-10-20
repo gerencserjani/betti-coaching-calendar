@@ -1,7 +1,6 @@
 export interface AppConfig {
   port: number;
   businessTimezone: string;
-  frontendUrl: string;
   jwtSecret: string;
   emailFrom: string;
   gmail: {
@@ -22,7 +21,6 @@ export default (): { app: AppConfig } => ({
   app: {
     port: parseInt(process.env.PORT ?? '3000', 10),
     businessTimezone: process.env.BUSINESS_TIMEZONE ?? 'Europe/Budapest',
-    frontendUrl: process.env.FRONTEND_URL ?? '',
     jwtSecret: process.env.JWT_SECRET ?? '',
     emailFrom: process.env.EMAIL_FROM ?? '',
     gmail: {

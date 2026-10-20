@@ -88,7 +88,10 @@ export class BookingsService {
     return booking;
   }
 
-  async create(dto: CreateBookingDto): Promise<BookingWithRelations> {
+  async create(
+    dto: CreateBookingDto,
+    originUrl: string | null = null,
+  ): Promise<BookingWithRelations> {
     const eventType = await this.prisma.eventType.findUnique({
       where: { id: dto.eventTypeId },
     });
@@ -142,6 +145,7 @@ export class BookingsService {
           clientPhone: dto.clientPhone,
           clientNote: dto.clientNote,
           locale: dto.locale,
+          originUrl,
           manageToken: nanoid(MANAGE_TOKEN_LENGTH),
         },
         include: BOOKING_INCLUDE,

@@ -19,3 +19,26 @@ export function isLocalhostOrigin(origin: string): boolean {
     return false;
   }
 }
+
+/**
+ * The calling frontend's own origin, for stamping onto a new Booking (see
+ * BookingsService.create()) -- browsers always send `Origin` on a
+ * cross-origin request like this one, so it's a reliable signal of which
+ * coach's site a booking was made through. Falls back to deriving it from
+ * `Referer` for the rare client that omits `Origin`; null if neither header
+ * is present (a non-browser caller, e.g. a manual API test).
+ */
+export function resolveRequestOrigin(
+  originHeader: string | undefined,
+  refererHeader: string | undefined,
+): string | null {
+  if (originHeader) return originHeader;
+  if (refererHeader) {
+    try {
+      return new URL(refererHeader).origin;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
