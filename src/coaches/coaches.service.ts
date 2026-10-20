@@ -38,7 +38,7 @@ export class CoachesService {
       throw new ConflictException('A coach with that email already exists');
     }
     const passwordHash = await this.passwordService.hash(dto.password);
-    return this.prisma.coach.create({
+    const coach = await this.prisma.coach.create({
       data: {
         email: dto.email,
         name: dto.name,
@@ -46,14 +46,18 @@ export class CoachesService {
         role: CoachRole.COACH,
       },
     });
+    this.logger.log(`Created coach ${coach.id} (${coach.email})`);
+    return coach;
   }
 
   /** ADMIN-only. */
-  revokeSessions(coachId: string): Promise<Coach> {
-    return this.prisma.coach.update({
+  async revokeSessions(coachId: string): Promise<Coach> {
+    const coach = await this.prisma.coach.update({
       where: { id: coachId },
       data: { sessionsRevokedAt: new Date() },
     });
+    this.logger.warn(`Revoked all sessions for coach ${coachId}`);
+    return coach;
   }
 
   /**

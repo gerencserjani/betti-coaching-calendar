@@ -4,7 +4,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { nanoid } from 'nanoid';
@@ -13,6 +12,7 @@ import type { MinuteRange } from '../availability/availability.types.js';
 import {
   BookingStatus,
   CancelledBy,
+  CoachRole,
   LocationType,
   Prisma,
   type Coach,
@@ -23,7 +23,10 @@ import { NotificationJobsService } from '../jobs/notification-jobs.service.js';
 import type { BookingWithRelations } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { runSerializable } from '../common/serializable-transaction.util.js';
-import { assertCoachOwnsOrIsAdmin } from '../common/ownership.util.js';
+import {
+  assertCoachOwnsOrIsAdmin,
+  resolveCoachScope,
+} from '../common/ownership.util.js';
 import { SettingsService } from '../settings/settings.service.js';
 import type {
   ClientCancelBookingDto,
@@ -48,11 +51,28 @@ export class BookingsService {
     private readonly i18n: I18nService,
   ) {}
 
-  async findAll(): Promise<BookingWithRelations[]> {
-    return this.prisma.booking.findMany({
+  // A plain COACH is always pinned to their own bookings -- `coachId` here
+  // can only narrow an ADMIN's view to one coach, never widen a COACH's.
+  // ADMIN with no `coachId` keeps the long-standing "see everything"
+  // default (there's no single coachId to fall back to for an admin who
+  // isn't a specific coach's own site).
+  async findAll(
+    coach: Coach,
+    coachId?: string,
+  ): Promise<BookingWithRelations[]> {
+    const scopedCoachId =
+      coach.role === CoachRole.ADMIN
+        ? coachId
+        : resolveCoachScope(coach, coachId);
+    const bookings = await this.prisma.booking.findMany({
+      where: scopedCoachId ? { coachId: scopedCoachId } : undefined,
       include: BOOKING_INCLUDE,
       orderBy: { startAt: 'asc' },
     });
+    this.logger.log(
+      `Listed ${bookings.length} booking(s) for ${coach.role} ${coach.id}${scopedCoachId ? ` (scoped to coach ${scopedCoachId})` : ' (all coaches)'}`,
+    );
+    return bookings;
   }
 
   async findByManageToken(token: string): Promise<BookingWithRelations> {
@@ -100,7 +120,7 @@ export class BookingsService {
     const endAt = startAt.plus({ minutes: eventType.durationMinutes });
     this.assertSameCalendarDay(startAt, endAt, timezone, dto.locale);
 
-    let booking = await runSerializable(this.prisma, async (tx) => {
+    const booking = await runSerializable(this.prisma, async (tx) => {
       await this.assertSlotIsBookable(
         tx,
         eventType.coachId,
@@ -128,16 +148,19 @@ export class BookingsService {
       });
     });
 
-    if (dto.location === LocationType.GOOGLE_MEET) {
-      booking = await this.attachFreshMeetLink(booking, dto.locale);
-    }
-
+    // Google Meet link creation happens in the notification job, not here --
+    // see NotificationJobsService.ensureMeetLink. It's an external API call
+    // with real failure risk, and the confirmation screen doesn't need the
+    // link synchronously (it's delivered via the email/ics attachment).
     await this.notificationJobsService.enqueue(
       booking.id,
       booking.coachId,
       'confirmed',
     );
 
+    this.logger.log(
+      `Created booking ${booking.id} for coach ${booking.coachId} (event type ${booking.eventTypeId})`,
+    );
     return booking;
   }
 
@@ -162,6 +185,9 @@ export class BookingsService {
       updated.id,
       updated.coachId,
       'cancelled',
+    );
+    this.logger.log(
+      `Cancelled booking ${updated.id} for coach ${updated.coachId} (by CLIENT)`,
     );
     return updated;
   }
@@ -191,6 +217,9 @@ export class BookingsService {
       updated.id,
       updated.coachId,
       'cancelled',
+    );
+    this.logger.log(
+      `Cancelled booking ${updated.id} for coach ${updated.coachId} (by ${coach.role} ${coach.id})`,
     );
     return updated;
   }
@@ -246,26 +275,24 @@ export class BookingsService {
       });
     });
 
-    if (updated.location === LocationType.GOOGLE_MEET) {
-      if (updated.googleEventId) {
-        await this.googleCalendarService.deleteEvent(
-          updated.coachId,
-          updated.googleEventId,
-        );
-        // Clear the now-dangling reference before attempting to create the
-        // replacement event, so a failure below can't leave the booking
-        // pointing at a Google event that no longer exists.
-        updated = await this.prisma.booking.update({
-          where: { id: updated.id },
-          data: { meetLink: null, googleEventId: null },
-          include: BOOKING_INCLUDE,
-        });
-      }
-      // deleteOnFailure: false -- this booking already existed and was
-      // confirmed before the reschedule; a transient Google API failure here
-      // must not delete the client's booking outright (see attachFreshMeetLink).
-      updated = await this.attachFreshMeetLink(updated, booking.locale, {
-        deleteOnFailure: false,
+    if (
+      updated.location === LocationType.GOOGLE_MEET &&
+      updated.googleEventId
+    ) {
+      // deleteEvent() is safe to call synchronously -- it swallows its own
+      // errors (best-effort cleanup, see GoogleCalendarService), so this
+      // can't fail the request. The replacement event is created by the
+      // notification job instead (NotificationJobsService.ensureMeetLink):
+      // that's the actual failure-prone external API call, and it shouldn't
+      // block this response or risk the client's already-committed new time.
+      await this.googleCalendarService.deleteEvent(
+        updated.coachId,
+        updated.googleEventId,
+      );
+      updated = await this.prisma.booking.update({
+        where: { id: updated.id },
+        data: { meetLink: null, googleEventId: null },
+        include: BOOKING_INCLUDE,
       });
     }
 
@@ -275,6 +302,9 @@ export class BookingsService {
       'rescheduled',
     );
 
+    this.logger.log(
+      `Rescheduled booking ${updated.id} for coach ${updated.coachId}`,
+    );
     return updated;
   }
 
@@ -298,55 +328,6 @@ export class BookingsService {
       },
       include: BOOKING_INCLUDE,
     });
-  }
-
-  private async attachFreshMeetLink(
-    booking: BookingWithRelations,
-    locale: string,
-    options: { deleteOnFailure: boolean } = { deleteOnFailure: true },
-  ): Promise<BookingWithRelations> {
-    try {
-      const meet = await this.googleCalendarService.createMeetEvent(
-        booking.coachId,
-        {
-          title: `${booking.eventType.title} — ${booking.clientName}`,
-          description: booking.clientNote ?? undefined,
-          startAt: booking.startAt,
-          endAt: booking.endAt,
-          attendeeEmails: [booking.clientEmail, booking.coach.email],
-        },
-      );
-      return this.prisma.booking.update({
-        where: { id: booking.id },
-        data: { meetLink: meet.meetLink, googleEventId: meet.eventId },
-        include: BOOKING_INCLUDE,
-      });
-    } catch (error) {
-      if (options.deleteOnFailure) {
-        // Only safe when called from create(): the booking was never
-        // confirmed to the client, so nothing of value is lost by undoing it.
-        this.logger.error(
-          'Failed to create Google Meet link, rolling back booking',
-          error,
-        );
-        await this.prisma.booking.delete({ where: { id: booking.id } });
-        throw new ServiceUnavailableException(
-          this.i18n.t('errors.meetLinkCreateFailed', locale),
-        );
-      }
-      // Called from rescheduleByClient(): the booking already existed and
-      // was already confirmed, and its new time is already committed -
-      // deleting it here would destroy a real, previously-confirmed booking
-      // over a transient Google API error. Leave it in place without a Meet
-      // link instead and surface a clear error asking the client to retry.
-      this.logger.error(
-        'Failed to regenerate Google Meet link after reschedule; booking kept, link missing',
-        error,
-      );
-      throw new ServiceUnavailableException(
-        this.i18n.t('errors.meetLinkRegenerateFailed', locale),
-      );
-    }
   }
 
   private assertConfirmed(

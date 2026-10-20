@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { Settings } from '@prisma/client';
 import type { UpdateSettingsDto } from './dto/update-settings.dto.js';
 
 @Injectable()
 export class SettingsService {
+  private readonly logger = new Logger(SettingsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -31,9 +33,11 @@ export class SettingsService {
 
   async update(coachId: string, dto: UpdateSettingsDto): Promise<Settings> {
     await this.get(coachId);
-    return this.prisma.settings.update({
+    const updated = await this.prisma.settings.update({
       where: { coachId },
       data: dto,
     });
+    this.logger.log(`Updated settings for coach ${coachId}`);
+    return updated;
   }
 }

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { jest } from '@jest/globals';
@@ -138,30 +139,19 @@ describe('BookingsService (integration)', () => {
       );
     });
 
-    it('generates a Google Meet link for a GOOGLE_MEET booking', async () => {
+    it('does not create the Google Meet link synchronously for a GOOGLE_MEET booking -- that happens in the notification job', async () => {
       const booking = await service.create(
         createDto({ location: LocationType.GOOGLE_MEET }),
       );
 
-      expect(googleCalendarService.createMeetEvent).toHaveBeenCalledTimes(1);
-      expect(booking.meetLink).toBe('https://meet.google.com/fake-link');
-      expect(booking.googleEventId).toBe('fake-event-id');
-    });
-
-    it('rolls back the booking if Google Meet creation fails, with a message in the booking locale', async () => {
-      googleCalendarService.createMeetEvent.mockRejectedValueOnce(
-        new Error('Google API down'),
+      expect(googleCalendarService.createMeetEvent).not.toHaveBeenCalled();
+      expect(booking.meetLink).toBeNull();
+      expect(booking.googleEventId).toBeNull();
+      expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
+        booking.id,
+        coach.id,
+        'confirmed',
       );
-
-      await expect(
-        service.create(createDto({ location: LocationType.GOOGLE_MEET })),
-      ).rejects.toThrow(
-        'Could not create the Google Meet link, please try again.',
-      );
-
-      const bookings = await testPrisma.booking.findMany();
-      expect(bookings).toHaveLength(0);
-      expect(notificationJobsService.enqueue).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException for a missing event type', async () => {
@@ -353,6 +343,79 @@ describe('BookingsService (integration)', () => {
     });
   });
 
+  describe('findAll', () => {
+    it("never returns another coach's bookings to a plain coach", async () => {
+      await service.create(createDto());
+      const otherCoach = await createTestCoach();
+      const otherEventType = await createTestEventType(otherCoach.id, {
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+      });
+      await createFullWeekAvailability(otherCoach.id);
+      await service.create(
+        createDto({
+          eventTypeId: otherEventType.id,
+          startAt: futureAt(11).toISO()!,
+        }),
+      );
+
+      const result = await service.findAll(coach);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.coachId).toBe(coach.id);
+    });
+
+    it("rejects a coach's request for another coach's bookings via coachId", async () => {
+      const otherCoach = await createTestCoach();
+      await expect(service.findAll(coach, otherCoach.id)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('lets an admin see every coach when no coachId is given', async () => {
+      await service.create(createDto());
+      const admin = await createTestCoach({ role: CoachRole.ADMIN });
+      const otherCoach = await createTestCoach();
+      const otherEventType = await createTestEventType(otherCoach.id, {
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+      });
+      await createFullWeekAvailability(otherCoach.id);
+      await service.create(
+        createDto({
+          eventTypeId: otherEventType.id,
+          startAt: futureAt(11).toISO()!,
+        }),
+      );
+
+      const result = await service.findAll(admin);
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('lets an admin scope to one coach via coachId', async () => {
+      await service.create(createDto());
+      const admin = await createTestCoach({ role: CoachRole.ADMIN });
+      const otherCoach = await createTestCoach();
+      const otherEventType = await createTestEventType(otherCoach.id, {
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+      });
+      await createFullWeekAvailability(otherCoach.id);
+      await service.create(
+        createDto({
+          eventTypeId: otherEventType.id,
+          startAt: futureAt(11).toISO()!,
+        }),
+      );
+
+      const result = await service.findAll(admin, otherCoach.id);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.coachId).toBe(otherCoach.id);
+    });
+  });
+
   describe('rescheduleByClient', () => {
     it('moves a booking to a new time on the same day', async () => {
       const booking = await service.create(createDto());
@@ -374,13 +437,18 @@ describe('BookingsService (integration)', () => {
       );
     });
 
-    it('regenerates the Google Meet link when rescheduling a GOOGLE_MEET booking', async () => {
+    it('clears an existing Google Meet link when rescheduling, but leaves creating the replacement to the notification job', async () => {
       const booking = await service.create(
         createDto({ location: LocationType.GOOGLE_MEET }),
       );
-      googleCalendarService.createMeetEvent.mockResolvedValueOnce({
-        eventId: 'new-event-id',
-        meetLink: 'https://meet.google.com/new-link',
+      // Simulate the notification job having already attached a Meet link
+      // for the original booking (create() itself no longer does this).
+      await testPrisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          meetLink: 'https://meet.google.com/fake-link',
+          googleEventId: 'fake-event-id',
+        },
       });
 
       const rescheduled = await service.rescheduleByClient(
@@ -394,8 +462,26 @@ describe('BookingsService (integration)', () => {
         coach.id,
         'fake-event-id',
       );
-      expect(rescheduled.meetLink).toBe('https://meet.google.com/new-link');
-      expect(rescheduled.googleEventId).toBe('new-event-id');
+      expect(googleCalendarService.createMeetEvent).not.toHaveBeenCalled();
+      expect(rescheduled.meetLink).toBeNull();
+      expect(rescheduled.googleEventId).toBeNull();
+      expect(notificationJobsService.enqueue).toHaveBeenCalledWith(
+        booking.id,
+        coach.id,
+        'rescheduled',
+      );
+    });
+
+    it('does not call deleteEvent when rescheduling a GOOGLE_MEET booking that never got a link yet', async () => {
+      const booking = await service.create(
+        createDto({ location: LocationType.GOOGLE_MEET }),
+      );
+
+      await service.rescheduleByClient(booking.manageToken, {
+        startAt: futureAt(15).toISO()!,
+      });
+
+      expect(googleCalendarService.deleteEvent).not.toHaveBeenCalled();
     });
 
     it('rejects rescheduling onto a slot that is already booked', async () => {

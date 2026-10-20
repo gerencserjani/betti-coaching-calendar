@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { calendar as createCalendarClient } from '@googleapis/calendar';
 import { GoogleOAuthService } from './google-oauth.service.js';
 
@@ -18,6 +18,8 @@ export interface MeetEventResult {
 
 @Injectable()
 export class GoogleCalendarService {
+  private readonly logger = new Logger(GoogleCalendarService.name);
+
   constructor(private readonly oauthService: GoogleOAuthService) {}
 
   /**
@@ -60,6 +62,7 @@ export class GoogleCalendarService {
       throw new Error('Google Calendar did not return a Meet link');
     }
 
+    this.logger.log(`Created Meet event ${data.id} for coach ${coachId}`);
     return { eventId: data.id, meetLink };
   }
 
@@ -68,8 +71,16 @@ export class GoogleCalendarService {
     const calendar = createCalendarClient({ version: 'v3', auth });
     await calendar.events
       .delete({ calendarId: 'primary', eventId, sendUpdates: 'none' })
-      .catch(() => {
-        // Best-effort cleanup; a missing/already-deleted event is not a failure for the caller.
+      .then(() => {
+        this.logger.log(`Deleted Meet event ${eventId} for coach ${coachId}`);
+      })
+      .catch((error) => {
+        // Best-effort cleanup; a missing/already-deleted event is not a
+        // failure for the caller, but worth a log line -- otherwise a
+        // genuinely failed cleanup (vs. an already-gone event) leaves no trace.
+        this.logger.warn(
+          `Could not delete Meet event ${eventId} for coach ${coachId}: ${error instanceof Error ? error.message : error}`,
+        );
       });
   }
 }

@@ -13,6 +13,8 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentCoach } from '../auth/current-coach.decorator.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import type { Coach } from '@prisma/client';
+import { OptionalCoachIdQueryDto } from '../common/dto/optional-coach-id-query.dto.js';
+import { resolveCoachScope } from '../common/ownership.util.js';
 import { CreateEventTypeDto } from './dto/create-event-type.dto.js';
 import { QueryEventTypesDto } from './dto/query-event-types.dto.js';
 import { ReorderEventTypesDto } from './dto/reorder-event-types.dto.js';
@@ -34,8 +36,13 @@ export class EventTypesController {
   @ApiBearerAuth()
   @Get('mine')
   @UseGuards(JwtAuthGuard)
-  findMine(@CurrentCoach() coach: Coach) {
-    return this.eventTypesService.findMine(coach.id);
+  findMine(
+    @CurrentCoach() coach: Coach,
+    @Query() query: OptionalCoachIdQueryDto,
+  ) {
+    return this.eventTypesService.findMine(
+      resolveCoachScope(coach, query.coachId),
+    );
   }
 
   @ApiBearerAuth()
