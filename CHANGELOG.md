@@ -1,3 +1,9 @@
+# [1.19.0](https://github.com/gerencserjani/coach-calendar/compare/v1.18.0...v1.19.0) (2026-10-20)
+
+### Features
+
+- one coach per site, validated against the allowed-origin list ([#39](https://github.com/gerencserjani/coach-calendar/issues/39)) ([e207b83](https://github.com/gerencserjani/coach-calendar/commit/e207b83006baa00c32af3cdedd51ac1808dbf3b7)), closes [#32](https://github.com/gerencserjani/coach-calendar/issues/32)
+
 # [1.18.0](https://github.com/gerencserjani/coach-calendar/compare/v1.17.0...v1.18.0) (2026-10-20)
 
 ### Features
