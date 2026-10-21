@@ -1,3 +1,9 @@
+# [1.22.0](https://github.com/gerencserjani/coach-calendar/compare/v1.21.1...v1.22.0) (2026-10-21)
+
+### Features
+
+- coach-branded booking emails (closes most of [#33](https://github.com/gerencserjani/coach-calendar/issues/33)) ([#47](https://github.com/gerencserjani/coach-calendar/issues/47)) ([a6c1fe7](https://github.com/gerencserjani/coach-calendar/commit/a6c1fe7d4e69f785ed295a035ecd628cde2fab32))
+
 ## [1.21.1](https://github.com/gerencserjani/coach-calendar/compare/v1.21.0...v1.21.1) (2026-10-21)
 
 ### Bug Fixes
