@@ -19,6 +19,7 @@ import { CoachesService } from './coaches.service.js';
 import { AcceptInviteDto } from './dto/accept-invite.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { InviteCoachDto } from './dto/invite-coach.dto.js';
+import { SetFrontendUrlDto } from './dto/set-frontend-url.dto.js';
 import { UpdateCoachDto } from './dto/update-coach.dto.js';
 
 @ApiTags('coaches')
@@ -89,5 +90,16 @@ export class CoachesController {
   @Roles(CoachRole.ADMIN)
   revokeSessions(@Param('id') id: string) {
     return this.coachesService.revokeSessions(id);
+  }
+
+  // Fixes up a coach that never got a frontendUrl via invite() -- see
+  // CoachesService.setFrontendUrl() for why that's only the legacy ADMIN
+  // account today.
+  @ApiBearerAuth()
+  @Patch(':id/frontend-url')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(CoachRole.ADMIN)
+  setFrontendUrl(@Param('id') id: string, @Body() dto: SetFrontendUrlDto) {
+    return this.coachesService.setFrontendUrl(id, dto.frontendUrl);
   }
 }
