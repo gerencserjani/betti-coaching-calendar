@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import { createTestCoach } from '../test/factories.js';
 import {
@@ -6,6 +6,7 @@ import {
   resetDatabase,
   testPrisma,
 } from '../test/prisma-test.util.js';
+import { DEFAULT_EMAIL_PALETTE } from '../notifications/templates/BookingEmail.js';
 import { SettingsService } from './settings.service.js';
 
 describe('SettingsService (integration)', () => {
@@ -72,5 +73,46 @@ describe('SettingsService (integration)', () => {
     await expect(service.get('no-such-coach')).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  describe('emailBrandPalette validation', () => {
+    it('accepts and persists a well-formed palette', async () => {
+      const coach = await createTestCoach();
+      const updated = await service.update(coach.id, {
+        emailBrandPalette: DEFAULT_EMAIL_PALETTE,
+      });
+      expect(updated.emailBrandPalette).toEqual(DEFAULT_EMAIL_PALETTE);
+    });
+
+    it('clears a previously-set palette back to null', async () => {
+      const coach = await createTestCoach();
+      await service.update(coach.id, {
+        emailBrandPalette: DEFAULT_EMAIL_PALETTE,
+      });
+      const cleared = await service.update(coach.id, {
+        emailBrandPalette: null,
+      });
+      expect(cleared.emailBrandPalette).toBeNull();
+    });
+
+    it('rejects a palette missing required keys', async () => {
+      const coach = await createTestCoach();
+      const incomplete = { light: DEFAULT_EMAIL_PALETTE.light };
+      await expect(
+        service.update(coach.id, { emailBrandPalette: incomplete }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects a palette with a non-hex color value', async () => {
+      const coach = await createTestCoach();
+      await expect(
+        service.update(coach.id, {
+          emailBrandPalette: {
+            ...DEFAULT_EMAIL_PALETTE,
+            light: { ...DEFAULT_EMAIL_PALETTE.light, accent: 'not-a-color' },
+          },
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 });

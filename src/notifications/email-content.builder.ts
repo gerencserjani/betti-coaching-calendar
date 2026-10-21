@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { I18nService } from '../i18n/i18n.service.js';
 import { LocationType, type CancelledBy } from '@prisma/client';
-import type { BookingEmailProps } from './templates/BookingEmail.js';
+import type {
+  BookingEmailProps,
+  EmailBrandPalette,
+} from './templates/BookingEmail.js';
 
 export type EmailRecipient = 'client' | 'coach';
 
@@ -19,6 +22,10 @@ export interface BookingEmailContext {
   clientPhone: string;
   timezone: string;
   logoUrl: string;
+  /** This coach's public-facing business name -- see BookingEmailProps. */
+  brandName: string;
+  brandTagline?: string;
+  palette: EmailBrandPalette;
   manageUrl: string;
   googleCalendarUrl: string;
   cancelledBy?: CancelledBy;
@@ -60,6 +67,9 @@ export class EmailContentBuilder {
         }),
         props: {
           logoUrl: ctx.logoUrl,
+          brandName: ctx.brandName,
+          brandTagline: ctx.brandTagline,
+          palette: ctx.palette,
           previewText: t('email.bookingCancelled.client.preview'),
           heading: t('email.bookingCancelled.client.heading'),
           intro: t(
@@ -83,6 +93,9 @@ export class EmailContentBuilder {
       }),
       props: {
         logoUrl: ctx.logoUrl,
+        brandName: ctx.brandName,
+        brandTagline: ctx.brandTagline,
+        palette: ctx.palette,
         previewText: t('email.bookingCancelled.coach.preview'),
         heading: t('email.bookingCancelled.coach.heading'),
         intro: t(
@@ -148,6 +161,9 @@ export class EmailContentBuilder {
         subject: t(`email.${kind}.client.subject`, vars),
         props: {
           logoUrl: ctx.logoUrl,
+          brandName: ctx.brandName,
+          brandTagline: ctx.brandTagline,
+          palette: ctx.palette,
           previewText: t(`email.${kind}.client.preview`, vars),
           heading: t(`email.${kind}.client.heading`),
           intro: t(`email.${kind}.client.intro`, vars),
@@ -166,6 +182,9 @@ export class EmailContentBuilder {
       subject: t(`email.${kind}.coach.subject`, vars),
       props: {
         logoUrl: ctx.logoUrl,
+        brandName: ctx.brandName,
+        brandTagline: ctx.brandTagline,
+        palette: ctx.palette,
         previewText: t(`email.${kind}.coach.preview`, vars),
         heading: t(`email.${kind}.coach.heading`),
         intro: t(`email.${kind}.coach.intro`, vars),

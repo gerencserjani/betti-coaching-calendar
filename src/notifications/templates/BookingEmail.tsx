@@ -13,11 +13,53 @@ import {
 } from '@react-email/components';
 import * as React from 'react';
 
-// Mirrors the frontend's `siteName` (src/content/site.ts) - kept as a
-// constant here rather than threaded through as a prop, same as the
-// frontend hardcodes it once at the content layer.
-const BRAND_NAME = 'Gerencsér Bernadett';
-const BRAND_TAGLINE = 'Családi és párkapcsolati coach';
+export interface EmailPalette {
+  bg: string;
+  bgPanel: string;
+  bgCard: string;
+  ink: string;
+  inkSoft: string;
+  accent: string;
+  accentSoft: string;
+  line: string;
+  brown: string;
+}
+
+export interface EmailBrandPalette {
+  light: EmailPalette;
+  dark: EmailPalette;
+}
+
+// Betti's own palette, mirrored from the frontend's CSS custom properties
+// (betti-coaching/src/index.css `:root` / `[data-theme="light"]` and the
+// dark-mode block -- hand-tuned there for WCAG contrast). Emails can't read
+// CSS variables, so the hex values are duplicated here. This is also the
+// fallback for any coach whose Settings.emailBrandPalette isn't set yet --
+// see NotificationsService.buildContext().
+export const DEFAULT_EMAIL_PALETTE: EmailBrandPalette = {
+  light: {
+    bg: '#fbf0f0',
+    bgPanel: '#f0dada',
+    bgCard: '#fef7f7',
+    ink: '#2a1717',
+    inkSoft: '#7c5959',
+    accent: '#9e5a69',
+    accentSoft: '#c99aa0',
+    line: '#e9cdcd',
+    brown: '#8b6b45',
+  },
+  dark: {
+    bg: '#241717',
+    bgPanel: '#2e1c1c',
+    bgCard: '#331f1f',
+    ink: '#f5e1e1',
+    inkSoft: '#c99898',
+    accent: '#d98ca0',
+    accentSoft: '#a15c6b',
+    line: '#4a2c2c',
+    brown: '#c9a171',
+  },
+};
 
 export interface BookingEmailDetail {
   label: string;
@@ -36,6 +78,15 @@ export interface BookingEmailLink {
 
 export interface BookingEmailProps {
   logoUrl: string;
+  /** This coach's public-facing business name, shown in the letterhead --
+   * not the same as Coach.name (that's the account holder's own name, used
+   * for internal/admin purposes -- see Settings.brandName). */
+  brandName: string;
+  /** Omits the tagline line entirely when unset (Settings.brandTagline). */
+  brandTagline?: string;
+  /** This coach's email color theme -- see Settings.emailBrandPalette,
+   * falls back to DEFAULT_EMAIL_PALETTE above when unset. */
+  palette: EmailBrandPalette;
   previewText: string;
   heading: string;
   intro: string;
@@ -59,6 +110,9 @@ export interface BookingEmailProps {
 
 export function BookingEmail({
   logoUrl,
+  brandName,
+  brandTagline,
+  palette,
   previewText,
   heading,
   intro,
@@ -72,10 +126,11 @@ export function BookingEmail({
   calendarNote,
   footer,
 }: BookingEmailProps) {
+  const styles = buildStyles(palette.light);
   return (
     <Html>
       <Head>
-        <style>{fontAndDarkModeCss}</style>
+        <style>{buildFontAndDarkModeCss(palette)}</style>
       </Head>
       <Preview>{previewText}</Preview>
       <Body style={styles.main} className="bcc-body">
@@ -85,15 +140,17 @@ export function BookingEmail({
               src={logoUrl}
               width={56}
               height={56}
-              alt={BRAND_NAME}
+              alt={brandName}
               style={styles.logo}
             />
             <Text style={styles.brandName} className="bcc-brand-name">
-              {BRAND_NAME}
+              {brandName}
             </Text>
-            <Text style={styles.brandTagline} className="bcc-brand-tagline">
-              {BRAND_TAGLINE}
-            </Text>
+            {brandTagline && (
+              <Text style={styles.brandTagline} className="bcc-brand-tagline">
+                {brandTagline}
+              </Text>
+            )}
           </Section>
 
           <Section style={styles.content}>
@@ -191,38 +248,13 @@ export function BookingEmail({
   );
 }
 
-// Brand palette, mirrored from the frontend's CSS custom properties
-// (src/index.css `:root` / `[data-theme="light"]` and the dark-mode block).
-// Emails can't read CSS variables, so the hex values are duplicated here;
-// keep the two in sync if the frontend's palette changes.
-const light = {
-  bg: '#fbf0f0',
-  bgPanel: '#f0dada',
-  bgCard: '#fef7f7',
-  ink: '#2a1717',
-  inkSoft: '#7c5959',
-  accent: '#9e5a69',
-  accentSoft: '#c99aa0',
-  line: '#e9cdcd',
-  brown: '#8b6b45',
-};
-
-const dark = {
-  bg: '#241717',
-  bgPanel: '#2e1c1c',
-  bgCard: '#331f1f',
-  ink: '#f5e1e1',
-  inkSoft: '#c99898',
-  accent: '#d98ca0',
-  accentSoft: '#a15c6b',
-  line: '#4a2c2c',
-  brown: '#c9a171',
-};
-
 // Google Fonts + a light `@import`/`@media` progressive enhancement layer.
-// Inline styles below carry the fallback stacks and light-mode colors, so
-// clients that strip <style> blocks (older Outlook) still render correctly.
-const fontAndDarkModeCss = `
+// Inline styles (buildStyles below) carry the fallback stacks and light-mode
+// colors, so clients that strip <style> blocks (older Outlook) still render
+// correctly.
+function buildFontAndDarkModeCss(palette: EmailBrandPalette): string {
+  const { dark } = palette;
+  return `
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,480;9..144,560&family=Work+Sans:wght@400;500;600&display=swap');
 
   @media (prefers-color-scheme: dark) {
@@ -242,123 +274,126 @@ const fontAndDarkModeCss = `
     .bcc-button-secondary { background-color: ${dark.bgCard} !important; color: ${dark.ink} !important; border-color: ${dark.line} !important; }
   }
 `;
+}
 
 const serif = '"Fraunces", Georgia, "Times New Roman", serif';
 const sans = '"Work Sans", Helvetica, Arial, sans-serif';
 
-const styles = {
-  main: {
-    backgroundColor: light.bg,
-    fontFamily: sans,
-    padding: '24px 0',
-  },
-  container: {
-    backgroundColor: light.bg,
-    margin: '0 auto',
-    maxWidth: '480px',
-    borderRadius: '16px',
-    overflow: 'hidden',
-    border: `1px solid ${light.line}`,
-  },
-  letterhead: {
-    backgroundColor: light.bgPanel,
-    padding: '28px 32px 22px',
-    textAlign: 'center' as const,
-    borderBottom: `1px solid ${light.line}`,
-  },
-  logo: {
-    display: 'block',
-    margin: '0 auto 10px',
-  },
-  brandName: {
-    fontFamily: serif,
-    fontWeight: 480,
-    letterSpacing: '-0.01em',
-    fontSize: '22px',
-    color: light.ink,
-    margin: 0,
-  },
-  brandTagline: {
-    fontFamily: sans,
-    fontSize: '13px',
-    color: light.inkSoft,
-    margin: '4px 0 0',
-  },
-  content: { padding: '32px' },
-  h1: {
-    fontFamily: serif,
-    fontWeight: 480,
-    letterSpacing: '-0.01em',
-    fontSize: '21px',
-    color: light.ink,
-    margin: '0 0 16px',
-  },
-  text: { fontSize: '15px', color: light.inkSoft, lineHeight: '22px' },
-  card: {
-    backgroundColor: light.bgCard,
-    border: `1px solid ${light.line}`,
-    borderRadius: '10px',
-    padding: '16px',
-    marginTop: '16px',
-  },
-  cardHeading: {
-    fontFamily: sans,
-    fontSize: '12px',
-    fontWeight: 600,
-    color: light.brown,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.04em',
-    margin: '0 0 8px',
-  },
-  noteCard: {
-    backgroundColor: light.bgPanel,
-    border: `1px solid ${light.accentSoft}`,
-    borderRadius: '10px',
-    padding: '16px',
-    marginTop: '12px',
-  },
-  detailRow: { fontSize: '14px', color: light.inkSoft, margin: '4px 0' },
-  buttonSection: { textAlign: 'center' as const, marginTop: '24px' },
-  buttonPrimary: {
-    backgroundColor: light.accent,
-    color: '#ffffff',
-    padding: '12px 22px',
-    borderRadius: '999px',
-    fontFamily: sans,
-    fontWeight: 500,
-    fontSize: '14px',
-    textDecoration: 'none',
-    margin: '0 8px',
-    display: 'inline-block',
-  },
-  buttonSecondary: {
-    backgroundColor: light.bgCard,
-    color: light.ink,
-    border: `1px solid ${light.ink}`,
-    padding: '12px 22px',
-    borderRadius: '999px',
-    fontFamily: sans,
-    fontWeight: 500,
-    fontSize: '14px',
-    textDecoration: 'none',
-    margin: '0 8px',
-    display: 'inline-block',
-  },
-  calendarNote: {
-    textAlign: 'center' as const,
-    marginTop: '10px',
-    fontSize: '13px',
-    color: light.inkSoft,
-    lineHeight: '18px',
-  },
-  manageLinksRow: {
-    textAlign: 'center' as const,
-    marginTop: '24px',
-    fontSize: '13px',
-    color: light.inkSoft,
-  },
-  manageLink: { color: light.inkSoft, textDecoration: 'underline' },
-  manageLinksSep: { color: light.line },
-  hr: { borderColor: light.line, marginTop: '32px' },
-  footerText: { fontSize: '12px', color: light.inkSoft },
-};
+function buildStyles(light: EmailPalette) {
+  return {
+    main: {
+      backgroundColor: light.bg,
+      fontFamily: sans,
+      padding: '24px 0',
+    },
+    container: {
+      backgroundColor: light.bg,
+      margin: '0 auto',
+      maxWidth: '480px',
+      borderRadius: '16px',
+      overflow: 'hidden',
+      border: `1px solid ${light.line}`,
+    },
+    letterhead: {
+      backgroundColor: light.bgPanel,
+      padding: '28px 32px 22px',
+      textAlign: 'center' as const,
+      borderBottom: `1px solid ${light.line}`,
+    },
+    logo: {
+      display: 'block',
+      margin: '0 auto 10px',
+    },
+    brandName: {
+      fontFamily: serif,
+      fontWeight: 480,
+      letterSpacing: '-0.01em',
+      fontSize: '22px',
+      color: light.ink,
+      margin: 0,
+    },
+    brandTagline: {
+      fontFamily: sans,
+      fontSize: '13px',
+      color: light.inkSoft,
+      margin: '4px 0 0',
+    },
+    content: { padding: '32px' },
+    h1: {
+      fontFamily: serif,
+      fontWeight: 480,
+      letterSpacing: '-0.01em',
+      fontSize: '21px',
+      color: light.ink,
+      margin: '0 0 16px',
+    },
+    text: { fontSize: '15px', color: light.inkSoft, lineHeight: '22px' },
+    card: {
+      backgroundColor: light.bgCard,
+      border: `1px solid ${light.line}`,
+      borderRadius: '10px',
+      padding: '16px',
+      marginTop: '16px',
+    },
+    cardHeading: {
+      fontFamily: sans,
+      fontSize: '12px',
+      fontWeight: 600,
+      color: light.brown,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.04em',
+      margin: '0 0 8px',
+    },
+    noteCard: {
+      backgroundColor: light.bgPanel,
+      border: `1px solid ${light.accentSoft}`,
+      borderRadius: '10px',
+      padding: '16px',
+      marginTop: '12px',
+    },
+    detailRow: { fontSize: '14px', color: light.inkSoft, margin: '4px 0' },
+    buttonSection: { textAlign: 'center' as const, marginTop: '24px' },
+    buttonPrimary: {
+      backgroundColor: light.accent,
+      color: '#ffffff',
+      padding: '12px 22px',
+      borderRadius: '999px',
+      fontFamily: sans,
+      fontWeight: 500,
+      fontSize: '14px',
+      textDecoration: 'none',
+      margin: '0 8px',
+      display: 'inline-block',
+    },
+    buttonSecondary: {
+      backgroundColor: light.bgCard,
+      color: light.ink,
+      border: `1px solid ${light.ink}`,
+      padding: '12px 22px',
+      borderRadius: '999px',
+      fontFamily: sans,
+      fontWeight: 500,
+      fontSize: '14px',
+      textDecoration: 'none',
+      margin: '0 8px',
+      display: 'inline-block',
+    },
+    calendarNote: {
+      textAlign: 'center' as const,
+      marginTop: '10px',
+      fontSize: '13px',
+      color: light.inkSoft,
+      lineHeight: '18px',
+    },
+    manageLinksRow: {
+      textAlign: 'center' as const,
+      marginTop: '24px',
+      fontSize: '13px',
+      color: light.inkSoft,
+    },
+    manageLink: { color: light.inkSoft, textDecoration: 'underline' },
+    manageLinksSep: { color: light.line },
+    hr: { borderColor: light.line, marginTop: '32px' },
+    footerText: { fontSize: '12px', color: light.inkSoft },
+  };
+}
