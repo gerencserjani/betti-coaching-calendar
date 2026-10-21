@@ -54,7 +54,7 @@ export async function createTestEventType(
     title: string;
     durationMinutes: number;
     locations: LocationType[];
-    price: number;
+    price: number | null;
     isActive: boolean;
   }> = {},
 ): Promise<EventType> {
@@ -64,7 +64,7 @@ export async function createTestEventType(
       title: overrides.title ?? unique('Event Type'),
       durationMinutes: overrides.durationMinutes ?? 30,
       locations: overrides.locations ?? [LocationType.PHONE],
-      price: overrides.price ?? 0,
+      price: overrides.price ?? null,
       isActive: overrides.isActive ?? true,
     },
   });

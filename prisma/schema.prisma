@@ -79,8 +79,10 @@ model EventType {
   description     String?
   durationMinutes Int
   locations       LocationType[]
-  /// Whole HUF amount. 0 means "not priced" - showing a price is optional.
-  price           Int            @default(0)
+  /// Whole HUF amount. Null means no price is shown for this service at all
+  /// (e.g. a coach who prices things on a separate page of their own site);
+  /// 0 means explicitly free, shown as such.
+  price           Int?
   /// Display order in the public catalog (ascending). Defaults to appended
   /// at the end; editable afterwards to reorder the listing.
   position        Int            @default(0)
