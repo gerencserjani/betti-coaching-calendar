@@ -1,3 +1,9 @@
+## [1.21.1](https://github.com/gerencserjani/coach-calendar/compare/v1.21.0...v1.21.1) (2026-10-21)
+
+### Bug Fixes
+
+- bound AllowedOrigin cache staleness across Cloud Run instances ([#46](https://github.com/gerencserjani/coach-calendar/issues/46)) ([46b97e1](https://github.com/gerencserjani/coach-calendar/commit/46b97e1bf0587792645e227f235e79af3d099d1e))
+
 # [1.21.0](https://github.com/gerencserjani/coach-calendar/compare/v1.20.1...v1.21.0) (2026-10-21)
 
 ### Features
