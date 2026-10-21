@@ -15,6 +15,7 @@ import {
   NotificationsService,
   type BookingWithRelations,
 } from './notifications.service.js';
+import { DEFAULT_EMAIL_PALETTE } from './templates/BookingEmail.js';
 
 function fakeEmailService(): jest.Mocked<EmailService> {
   return {
@@ -155,5 +156,39 @@ describe('NotificationsService (integration)', () => {
       service.notifyBookingConfirmed(booking),
     ).resolves.toBeUndefined();
     expect(clientEmailInput().props.logoUrl).toBe('/email-logo.png');
+  });
+
+  describe('branding fallback chain', () => {
+    it("falls back to the coach's own name, no tagline, and the default palette when Settings has no branding set", async () => {
+      const booking = await createBooking(LocationType.PHONE);
+      await service.notifyBookingConfirmed(booking);
+
+      const { props } = clientEmailInput();
+      expect(props.brandName).toBe(coach.name);
+      expect(props.brandTagline).toBeUndefined();
+      expect(props.palette).toEqual(DEFAULT_EMAIL_PALETTE);
+    });
+
+    it("uses this coach's own brandName/brandTagline/emailBrandPalette once set", async () => {
+      const customPalette = {
+        ...DEFAULT_EMAIL_PALETTE,
+        light: { ...DEFAULT_EMAIL_PALETTE.light, accent: '#123456' },
+      };
+      await testPrisma.settings.update({
+        where: { coachId: coach.id },
+        data: {
+          brandName: 'Kovács Anna',
+          brandTagline: 'Életvezetési coach',
+          emailBrandPalette: customPalette,
+        },
+      });
+      const booking = await createBooking(LocationType.PHONE);
+      await service.notifyBookingConfirmed(booking);
+
+      const { props } = clientEmailInput();
+      expect(props.brandName).toBe('Kovács Anna');
+      expect(props.brandTagline).toBe('Életvezetési coach');
+      expect(props.palette).toEqual(customPalette);
+    });
   });
 });

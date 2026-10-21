@@ -305,12 +305,14 @@ reasoning in the conversation history if you need the "why".
   files from `src/i18n/locales/`, mirroring the frontend's own i18next setup.
   Every confirmation/reschedule email carries a `.ics` attachment (works in
   Apple/Outlook/Google) plus a Google Calendar "quick add" link. Sending is
-  queued and retried, not fire-and-forget — see "Background jobs" below. The
-  email HTML mirrors the frontend's brand (colors/fonts from
-  `betti-coaching/src/index.css`'s custom properties, both light and
-  dark-mode variants) — see the comment above the `light`/`dark` palette
-  constants in `BookingEmail.tsx` if that palette changes and the email needs
-  updating to match.
+  queued and retried, not fire-and-forget — see "Background jobs" below.
+  `BookingEmail.tsx`'s letterhead name/tagline and light/dark color theme are
+  per-coach (`Settings.brandName`/`brandTagline`/`emailBrandPalette`), not
+  hardcoded — a coach with none set falls back to `DEFAULT_EMAIL_PALETTE`
+  (Betti's own palette, mirrored from `betti-coaching/src/index.css`'s custom
+  properties — the two are kept manually in sync, see the comment above that
+  constant). See "Coach-branded booking emails" in `CONTEXT.md` for the full
+  design.
 - **Cancellation/reschedule**: only the client can reschedule (self-service);
   a coach can only cancel, with a mandatory reason. Both are blocked within
   `Settings.cancellationNoticeHours` (default 48h) of the appointment for

@@ -15,6 +15,10 @@ import {
 import { EmailService } from './email.service.js';
 import { buildGoogleCalendarQuickAddUrl } from './google-calendar-link.util.js';
 import { buildIcsFile } from './ics.util.js';
+import {
+  DEFAULT_EMAIL_PALETTE,
+  type EmailBrandPalette,
+} from './templates/BookingEmail.js';
 
 export type BookingWithRelations = Booking & {
   eventType: EventType;
@@ -141,6 +145,11 @@ export class NotificationsService {
       clientPhone: booking.clientPhone,
       timezone: settings.businessTimezone,
       logoUrl: `${frontendUrl ?? ''}/email-logo.png`,
+      brandName: settings.brandName ?? booking.coach.name,
+      brandTagline: settings.brandTagline ?? undefined,
+      palette:
+        (settings.emailBrandPalette as EmailBrandPalette | null) ??
+        DEFAULT_EMAIL_PALETTE,
       // The frontend has no /bookings/manage route -- the manage UI lives
       // inline in the booking section on the homepage, reading a `manage`
       // query param (see Booking.tsx). No hash here: the content builder

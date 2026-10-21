@@ -1,7 +1,13 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import type { Settings } from '@prisma/client';
+import { Prisma, type Settings } from '@prisma/client';
 import type { UpdateSettingsDto } from './dto/update-settings.dto.js';
+import { isValidEmailBrandPalette } from './email-brand-palette.util.js';
 
 @Injectable()
 export class SettingsService {
@@ -33,9 +39,26 @@ export class SettingsService {
 
   async update(coachId: string, dto: UpdateSettingsDto): Promise<Settings> {
     await this.get(coachId);
+    if (
+      dto.emailBrandPalette != null &&
+      !isValidEmailBrandPalette(dto.emailBrandPalette)
+    ) {
+      throw new BadRequestException(
+        'emailBrandPalette must have light/dark objects, each with hex color values for bg, bgPanel, bgCard, ink, inkSoft, accent, accentSoft, line, brown',
+      );
+    }
     const updated = await this.prisma.settings.update({
       where: { coachId },
-      data: dto,
+      // Prisma's typed Json field update requires the Prisma.JsonNull
+      // sentinel to set it to SQL NULL -- a plain `null` is only valid for
+      // non-Json fields, so this can't just be `data: dto`.
+      data: {
+        ...dto,
+        emailBrandPalette:
+          dto.emailBrandPalette === null
+            ? Prisma.JsonNull
+            : (dto.emailBrandPalette as Prisma.InputJsonValue | undefined),
+      },
     });
     this.logger.log(`Updated settings for coach ${coachId}`);
     return updated;

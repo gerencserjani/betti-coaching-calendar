@@ -1,5 +1,6 @@
 import { CancelledBy, LocationType } from '@prisma/client';
 import { I18nService } from '../i18n/i18n.service.js';
+import { DEFAULT_EMAIL_PALETTE } from './templates/BookingEmail.js';
 import {
   EmailContentBuilder,
   type BookingEmailContext,
@@ -20,6 +21,9 @@ function baseContext(
     clientPhone: '+36301234567',
     timezone: 'Europe/Budapest',
     logoUrl: 'https://example.com/email-logo.png',
+    brandName: 'Gerencsér Bernadett',
+    brandTagline: 'Családi és párkapcsolati coach',
+    palette: DEFAULT_EMAIL_PALETTE,
     manageUrl: 'https://example.com/manage?token=abc',
     googleCalendarUrl: 'https://calendar.google.com/calendar/render?...',
     ...overrides,
@@ -55,6 +59,25 @@ describe('EmailContentBuilder', () => {
       ]);
       expect(props.secondaryButton?.url).toContain('calendar.google.com');
       expect(props.details).toHaveLength(4);
+    });
+
+    it("passes the coach's brand name, tagline, and palette through unchanged", () => {
+      const customPalette = {
+        ...DEFAULT_EMAIL_PALETTE,
+        light: { ...DEFAULT_EMAIL_PALETTE.light, accent: '#123456' },
+      };
+      const { props } = builder.buildConfirmed(
+        baseContext({
+          brandName: 'Kovács Anna',
+          brandTagline: 'Életvezetési coach',
+          palette: customPalette,
+        }),
+        'client',
+        'hu',
+      );
+      expect(props.brandName).toBe('Kovács Anna');
+      expect(props.brandTagline).toBe('Életvezetési coach');
+      expect(props.palette).toBe(customPalette);
     });
 
     it('builds coach content without manage links (only the coach-facing calendar link)', () => {

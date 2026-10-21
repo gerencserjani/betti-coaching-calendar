@@ -177,6 +177,18 @@ model Settings {
   /// Resend yet -- EmailService falls back to the shared GMAIL_* sender
   /// until set via PATCH /settings.
   emailFrom               String?
+  /// Public-facing business name shown in booking email letterheads (see
+  /// BookingEmail.tsx) -- NOT the same as Coach.name, which is the account
+  /// holder's own name for internal/admin purposes. Null falls back to
+  /// Coach.name (see NotificationsService.buildContext).
+  brandName               String?
+  /// Shown under brandName in the email letterhead; null omits the line
+  /// entirely (see #33).
+  brandTagline            String?
+  /// `{ light: {...9 hex fields}, dark: {...9 hex fields} }`, same shape as
+  /// BookingEmail.tsx's EmailPalette -- this coach's email color theme.
+  /// Null falls back to DEFAULT_EMAIL_PALETTE (Betti's own palette).
+  emailBrandPalette       Json?
   updatedAt               DateTime @updatedAt
 }
 
