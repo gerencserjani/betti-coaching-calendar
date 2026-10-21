@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DateTime } from 'luxon';
 import { I18nService } from '../i18n/i18n.service.js';
 import { LocationType, type CancelledBy } from '@prisma/client';
+import { formatPriceHuf } from './price-format.util.js';
 import type {
   BookingEmailProps,
   EmailBrandPalette,
@@ -11,6 +12,9 @@ export type EmailRecipient = 'client' | 'coach';
 
 export interface BookingEmailContext {
   eventTypeTitle: string;
+  /** Whole HUF, null, or 0 -- same three-state meaning as EventType.price,
+   * see formatPriceHuf (price-format.util.ts). */
+  price: number | null;
   clientName: string;
   coachName: string;
   startAt: Date;
@@ -228,6 +232,12 @@ export class EmailContentBuilder {
       minute: '2-digit',
     });
 
+    const priceLabel = formatPriceHuf(
+      ctx.price,
+      locale,
+      t('email.common.free'),
+    );
+
     return [
       { label: t('email.common.labelEventType'), value: ctx.eventTypeTitle },
       { label: t('email.common.labelDateTime'), value: formattedDateTime },
@@ -239,6 +249,11 @@ export class EmailContentBuilder {
         label: t('email.common.labelLocation'),
         value: this.locationLabel(ctx, locale),
       },
+      // Omitted entirely when null -- this coach doesn't show a price for
+      // this service at all (see EventType.price), not just "it's free".
+      ...(priceLabel
+        ? [{ label: t('email.common.labelPrice'), value: priceLabel }]
+        : []),
     ];
   }
 

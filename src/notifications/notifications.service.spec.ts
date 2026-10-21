@@ -158,6 +158,30 @@ describe('NotificationsService (integration)', () => {
     expect(clientEmailInput().props.logoUrl).toBe('/email-logo.png');
   });
 
+  describe('price in the email details', () => {
+    it("omits the price row when the event type has none set (today's default)", async () => {
+      const booking = await createBooking(LocationType.PHONE);
+      await service.notifyBookingConfirmed(booking);
+
+      expect(
+        clientEmailInput().props.details.find((d) => d.label === 'Ár'),
+      ).toBeUndefined();
+    });
+
+    it("includes the event type's own price when set", async () => {
+      await testPrisma.eventType.update({
+        where: { id: eventType.id },
+        data: { price: 15000 },
+      });
+      const booking = await createBooking(LocationType.PHONE);
+      await service.notifyBookingConfirmed(booking);
+
+      expect(
+        clientEmailInput().props.details.find((d) => d.label === 'Ár')?.value,
+      ).toContain('HUF');
+    });
+  });
+
   describe('branding fallback chain', () => {
     it("falls back to the coach's own name, no tagline, and the default palette when Settings has no branding set", async () => {
       const booking = await createBooking(LocationType.PHONE);
