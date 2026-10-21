@@ -5,6 +5,8 @@
   "email.common.labelDateTime": "Date & time",
   "email.common.labelDuration": "Duration",
   "email.common.labelLocation": "Location",
+  "email.common.labelPrice": "Price",
+  "email.common.free": "Free",
   "email.common.labelClient": "Client",
   "email.common.minutes": "{{count}} minutes",
   "email.common.locationInPerson": "In person – {{address}}",

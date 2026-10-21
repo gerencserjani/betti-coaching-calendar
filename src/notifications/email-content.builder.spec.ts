@@ -11,6 +11,7 @@ function baseContext(
 ): BookingEmailContext {
   return {
     eventTypeTitle: 'Kezdő konzultáció',
+    price: null,
     clientName: 'Teszt Elek',
     coachName: 'Gerencsér Bernadett',
     startAt: new Date('2026-09-21T07:00:00.000Z'),
@@ -197,6 +198,69 @@ describe('EmailContentBuilder', () => {
       expect(props.calendarNote).toBe(
         'Ha a korábbi időpontot már hozzáadtad a naptáradhoz, kérjük töröld azt, és vedd fel helyette az újat a fenti gombbal.',
       );
+    });
+  });
+
+  describe('price row in the details card', () => {
+    it('omits the price row entirely when the service has no price set', () => {
+      const { props } = builder.buildConfirmed(
+        baseContext({ price: null }),
+        'client',
+        'hu',
+      );
+      expect(props.details.find((d) => d.label === 'Ár')).toBeUndefined();
+    });
+
+    it('shows the free label for an explicit price of 0', () => {
+      const { props } = builder.buildConfirmed(
+        baseContext({ price: 0 }),
+        'client',
+        'hu',
+      );
+      expect(props.details.find((d) => d.label === 'Ár')?.value).toBe(
+        'Díjmentes',
+      );
+    });
+
+    it('shows the formatted price for a positive value', () => {
+      const { props } = builder.buildConfirmed(
+        baseContext({ price: 15000 }),
+        'client',
+        'hu',
+      );
+      const priceDetail = props.details.find((d) => d.label === 'Ár');
+      expect(priceDetail?.value).toContain('15');
+      expect(priceDetail?.value).toContain('HUF');
+    });
+
+    it('also shows the price to the coach, same as the client', () => {
+      const { props } = builder.buildConfirmed(
+        baseContext({ price: 15000 }),
+        'coach',
+        'hu',
+      );
+      expect(props.details.find((d) => d.label === 'Ár')?.value).toContain(
+        'HUF',
+      );
+    });
+
+    it('appears for cancelled and rescheduled emails too, not just confirmations', () => {
+      const cancelled = builder.buildCancelled(
+        baseContext({ price: 15000, cancelledBy: CancelledBy.CLIENT }),
+        'client',
+        'hu',
+      );
+      const rescheduled = builder.buildRescheduled(
+        baseContext({ price: 15000 }),
+        'client',
+        'hu',
+      );
+      expect(
+        cancelled.props.details.find((d) => d.label === 'Ár'),
+      ).toBeDefined();
+      expect(
+        rescheduled.props.details.find((d) => d.label === 'Ár'),
+      ).toBeDefined();
     });
   });
 });

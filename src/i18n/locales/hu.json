@@ -5,6 +5,8 @@
   "email.common.labelDateTime": "Időpont",
   "email.common.labelDuration": "Hossz",
   "email.common.labelLocation": "Helyszín",
+  "email.common.labelPrice": "Ár",
+  "email.common.free": "Díjmentes",
   "email.common.labelClient": "Ügyfél",
   "email.common.minutes": "{{count}} perc",
   "email.common.locationInPerson": "Személyes találkozó – {{address}}",
