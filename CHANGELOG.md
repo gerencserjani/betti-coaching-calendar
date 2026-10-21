@@ -1,3 +1,9 @@
+# [1.23.0](https://github.com/gerencserjani/coach-calendar/compare/v1.22.0...v1.23.0) (2026-10-21)
+
+### Features
+
+- make EventType.price nullable -- null hides it, 0 means free ([#48](https://github.com/gerencserjani/coach-calendar/issues/48)) ([b8ce3b8](https://github.com/gerencserjani/coach-calendar/commit/b8ce3b8aaa2e2e24c75faf4eb2a04050f29adc14))
+
 # [1.22.0](https://github.com/gerencserjani/coach-calendar/compare/v1.21.1...v1.22.0) (2026-10-21)
 
 ### Features
