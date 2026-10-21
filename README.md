@@ -112,6 +112,15 @@ Both Jest configs set `maxWorkers: 1`: integration and e2e specs share one
 real database and reset it per-test, so parallel workers would race and wipe
 each other's fixtures mid-test.
 
+### CI
+
+`.github/workflows/ci.yml` runs on every pull request (and on push to
+`main`): `npm run lint`, `npm run build`, `npm test`, and `npm run test:e2e`,
+against a throwaway Postgres service container seeded with the same dummy
+credentials already committed in `.env.test` — no GitHub secrets needed. This
+is separate from `.github/workflows/release.yml` (semantic-release on push to
+`main`, see "Releases" below), which doesn't run the test suites itself.
+
 ## Environment variables
 
 See `.env.example` for the full list. Notes on the less obvious ones:
@@ -207,6 +216,11 @@ Instead:
     were both accepted around the same time). `AllowedOrigin` itself stays a
     separate, coach-agnostic CORS allow-list — `invite()` only reads it to
     validate the URL, there's no foreign key between the two tables.
+  - `PATCH /coaches/:id/frontend-url` (admin-only) sets/corrects an
+    _existing_ coach's `frontendUrl` after the fact, with the same two
+    checks as `invite()` above. The one coach that actually needs this today
+    is the seeded ADMIN account (see "The one admin account" below), which
+    predates `invite()` and so never got a `frontendUrl` the normal way.
 
 - **Forgotten password**: `POST /auth/forgot-password` (public; body:
   `email`) always returns `204` — silently, whether or not that email has an

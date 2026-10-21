@@ -92,6 +92,35 @@ describe('AllowedOriginsService (integration)', () => {
         service.isAllowed('https://peti-coaching.vercel.app'),
       ).resolves.toBe(false);
     });
+
+    // In production, Cloud Run can run several instances of this service at
+    // once, each with its own in-memory cache -- add()/remove() only ever
+    // invalidates the instance that handled that call. A write made through
+    // a *different* instance (stood in for here by writing via `prisma`
+    // directly, bypassing this `service` entirely) is exactly that case.
+    it('eventually picks up a write this instance never invalidated for, once the TTL has passed', async () => {
+      await expect(
+        service.isAllowed('https://peti-coaching.vercel.app'),
+      ).resolves.toBe(false);
+
+      await prisma.allowedOrigin.create({
+        data: { origin: 'https://peti-coaching.vercel.app' },
+      });
+
+      // Still stale -- this instance has no way to know yet, within the TTL.
+      await expect(
+        service.isAllowed('https://peti-coaching.vercel.app'),
+      ).resolves.toBe(false);
+
+      // Simulates the TTL window having elapsed, without needing fake
+      // timers (which risk hanging Prisma's own internal timers).
+      (service as unknown as { cachedAt: number }).cachedAt =
+        Date.now() - 61_000;
+
+      await expect(
+        service.isAllowed('https://peti-coaching.vercel.app'),
+      ).resolves.toBe(true);
+    });
   });
 
   describe('remove', () => {
