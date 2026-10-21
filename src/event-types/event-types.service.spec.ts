@@ -31,13 +31,13 @@ describe('EventTypesService (integration)', () => {
   });
 
   describe('create', () => {
-    it("defaults price to 0 and appends position to the end of the coach's own catalog", async () => {
+    it("defaults price to null (no price shown) and appends position to the end of the coach's own catalog", async () => {
       const first = await service.create(coachA, {
         title: 'First',
         durationMinutes: 30,
         locations: [LocationType.PHONE],
       });
-      expect(first.price).toBe(0);
+      expect(first.price).toBeNull();
       expect(first.position).toBe(0);
 
       const second = await service.create(coachA, {
@@ -71,6 +71,26 @@ describe('EventTypesService (integration)', () => {
         position: 7,
       });
       expect(eventType.position).toBe(7);
+    });
+
+    it('keeps an explicit price of 0 as 0, not null -- these mean different things (explicitly free vs. no price shown)', async () => {
+      const eventType = await service.create(coachA, {
+        title: 'Free consult',
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+        price: 0,
+      });
+      expect(eventType.price).toBe(0);
+    });
+
+    it('keeps an explicit positive price', async () => {
+      const eventType = await service.create(coachA, {
+        title: 'Priced session',
+        durationMinutes: 30,
+        locations: [LocationType.PHONE],
+        price: 15000,
+      });
+      expect(eventType.price).toBe(15000);
     });
   });
 
@@ -137,6 +157,14 @@ describe('EventTypesService (integration)', () => {
       await expect(
         service.update(coachB, eventType.id, { title: 'Hijacked' }),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('clears a price back to "not shown" when explicitly updated to null', async () => {
+      const eventType = await createTestEventType(coachA.id, { price: 5000 });
+      const updated = await service.update(coachA, eventType.id, {
+        price: null,
+      });
+      expect(updated.price).toBeNull();
     });
   });
 

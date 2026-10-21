@@ -32,11 +32,12 @@ export class CreateEventTypeDto {
   @IsEnum(LocationType, { each: true })
   locations!: LocationType[];
 
-  /** Whole HUF amount. Optional - omit or send 0 for "no price shown". */
+  /** Whole HUF amount. Omit/null for no price shown at all; 0 for
+   * explicitly free (shown as such) -- see EventType.price. */
   @IsOptional()
   @IsInt()
   @Min(0)
-  price?: number;
+  price?: number | null;
 
   /** Display order in the public catalog. Defaults to appended at the end. */
   @IsOptional()
