@@ -1,3 +1,9 @@
+# [1.24.0](https://github.com/gerencserjani/coach-calendar/compare/v1.23.0...v1.24.0) (2026-10-21)
+
+### Features
+
+- show the service's price in booking confirmation/cancel/reschedule emails ([#49](https://github.com/gerencserjani/coach-calendar/issues/49)) ([5d963bb](https://github.com/gerencserjani/coach-calendar/commit/5d963bb20a983592677a2d2acfd79f523c3f1595))
+
 # [1.23.0](https://github.com/gerencserjani/coach-calendar/compare/v1.22.0...v1.23.0) (2026-10-21)
 
 ### Features
