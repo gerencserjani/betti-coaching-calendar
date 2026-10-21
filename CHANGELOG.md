@@ -1,3 +1,9 @@
+# [1.21.0](https://github.com/gerencserjani/coach-calendar/compare/v1.20.1...v1.21.0) (2026-10-21)
+
+### Features
+
+- admin endpoint to fix up a coach's frontendUrl after the fact ([#45](https://github.com/gerencserjani/coach-calendar/issues/45)) ([d18e92f](https://github.com/gerencserjani/coach-calendar/commit/d18e92fe8516ef4db5ba31b7d3b822ae2e46712f))
+
 ## [1.20.1](https://github.com/gerencserjani/coach-calendar/compare/v1.20.0...v1.20.1) (2026-10-20)
 
 ### Bug Fixes
