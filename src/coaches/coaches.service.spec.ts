@@ -194,6 +194,47 @@ describe('CoachesService (integration)', () => {
     });
   });
 
+  describe('setFrontendUrl', () => {
+    it('sets frontendUrl on the given coach', async () => {
+      const coach = await createTestCoach();
+      const origin = await createTestAllowedOrigin();
+
+      const updated = await service.setFrontendUrl(coach.id, origin.origin);
+
+      expect(updated.frontendUrl).toBe(origin.origin);
+    });
+
+    it('allows re-setting a coach to the site it already owns', async () => {
+      const origin = await createTestAllowedOrigin();
+      const coach = await createTestCoach({ frontendUrl: origin.origin });
+
+      await expect(
+        service.setFrontendUrl(coach.id, origin.origin),
+      ).resolves.toMatchObject({ frontendUrl: origin.origin });
+    });
+
+    it('rejects a site that already belongs to a different coach', async () => {
+      const origin = await createTestAllowedOrigin();
+      await createTestCoach({ frontendUrl: origin.origin });
+      const other = await createTestCoach();
+
+      await expect(
+        service.setFrontendUrl(other.id, origin.origin),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('rejects a site that is not an allowed origin', async () => {
+      const coach = await createTestCoach();
+
+      await expect(
+        service.setFrontendUrl(
+          coach.id,
+          'https://not-allow-listed.example.com',
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('revokeSessions', () => {
     it('stamps sessionsRevokedAt with the current time', async () => {
       const coach = await createTestCoach();

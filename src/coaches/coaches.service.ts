@@ -125,6 +125,39 @@ export class CoachesService {
     return { accessToken, coach };
   }
 
+  /**
+   * ADMIN-only: assigns/corrects an existing coach's site after the fact --
+   * the only coach that ever needs this today is the legacy pre-invite-flow
+   * ADMIN account, which was created directly in the DB before `invite()`
+   * existed and so never got a `frontendUrl` the way every invited coach
+   * does. Without one, that coach's site doesn't get excluded from the
+   * invite dropdown (coach-admin's InviteCoachForm) or from invite()'s own
+   * uniqueness check above -- both key off `Coach.frontendUrl`, which was
+   * simply never set for her. Same two checks as invite(): the URL must be
+   * a known AllowedOrigin, and not already claimed by a *different* coach
+   * (re-setting a coach's own current value is a harmless no-op).
+   */
+  async setFrontendUrl(coachId: string, frontendUrl: string): Promise<Coach> {
+    const allowedOrigin = await this.prisma.allowedOrigin.findUnique({
+      where: { origin: frontendUrl },
+    });
+    if (!allowedOrigin) {
+      throw new NotFoundException('That site is not an allowed origin');
+    }
+    const coachForSite = await this.prisma.coach.findUnique({
+      where: { frontendUrl },
+    });
+    if (coachForSite && coachForSite.id !== coachId) {
+      throw new ConflictException('This site already has a coach assigned');
+    }
+    const coach = await this.prisma.coach.update({
+      where: { id: coachId },
+      data: { frontendUrl },
+    });
+    this.logger.log(`Set frontendUrl for coach ${coach.id} to ${frontendUrl}`);
+    return coach;
+  }
+
   /** ADMIN-only. */
   async revokeSessions(coachId: string): Promise<Coach> {
     const coach = await this.prisma.coach.update({
