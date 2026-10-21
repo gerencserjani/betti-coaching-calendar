@@ -288,10 +288,14 @@ reasoning in the conversation history if you need the "why".
   `0` shows "free" explicitly. `position` (display order in the public
   catalog, defaults to appended-at-the-end) is unrelated. Both are editable
   later via `PATCH /event-types/:id`.
-- **Shared-calendar conflict rule**: only one coach may be "on duty" at a
-  time. Saving a weekly-hours row or a date override is rejected up front if
-  it overlaps another coach's schedule (`AvailabilityService` in
-  `src/availability/`) — see `assertNoCrossCoachConflictFor{Weekday,Date}`.
+- **Availability is purely per-coach**: `AvailabilityService` (`src/availability/`)
+  only ever reads one coach's own `WeeklyAvailability`/`AvailabilityOverride`
+  rows (`getEffectiveRangesForDate`) — there's no cross-coach exclusivity
+  rule ("only one coach on duty at a time"). An earlier version of this app
+  had one (back when multiple coaches could share one `Tenant`'s calendar,
+  see `CONTEXT.md`'s "one website = one Coach" note); it was removed along
+  with the `OWNER` role once that model was ruled out, since every coach's
+  bookable hours are now independent.
 - **Booking race safety**: `BookingsService.create`/`rescheduleByClient` wrap
   the availability + overlap check and the write in a single `SERIALIZABLE`
   Postgres transaction, retried a few times on serialization failure, so two
