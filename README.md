@@ -3,7 +3,9 @@
 Booking/calendar backend API: coach accounts, event types, availability, and
 bookings, shared by any number of independent coach websites — a
 [NestJS](https://nestjs.com) project. Currently used by
-[betti-coaching](https://github.com/gerencserjani/betti-coaching).
+[coach-monorepo](https://github.com/gerencserjani/coach-monorepo) (a monorepo
+of coach sites sharing one frontend skeleton; Betti's own site lives at
+`apps/betti` there — see that repo's own README).
 
 A single shared booking calendar: coaches each manage their own event types and
 weekly availability, clients book without an account, and the whole thing is
@@ -316,10 +318,10 @@ reasoning in the conversation history if you need the "why".
   `BookingEmail.tsx`'s letterhead name/tagline and light/dark color theme are
   per-coach (`Settings.brandName`/`brandTagline`/`emailBrandPalette`), not
   hardcoded — a coach with none set falls back to `DEFAULT_EMAIL_PALETTE`
-  (Betti's own palette, mirrored from `betti-coaching/src/index.css`'s custom
-  properties — the two are kept manually in sync, see the comment above that
-  constant). See "Coach-branded booking emails" in `CONTEXT.md` for the full
-  design.
+  (Betti's own palette, mirrored from `coach-monorepo/apps/betti/src/index.css`'s
+  custom properties — the two are kept manually in sync, see the comment
+  above that constant). See "Coach-branded booking emails" in `CONTEXT.md`
+  for the full design.
 - **Cancellation/reschedule**: only the client can reschedule (self-service);
   a coach can only cancel, with a mandatory reason. Both are blocked within
   `Settings.cancellationNoticeHours` (default 48h) of the appointment for
